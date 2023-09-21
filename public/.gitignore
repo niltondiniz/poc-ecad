@@ -11,8 +11,6 @@
 # production
 /build
 
-*.mp3
-
 # misc
 .DS_Store
 .env.local
