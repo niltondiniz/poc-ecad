@@ -68,6 +68,7 @@ export const useWavesurfer = (containerRef, options: WavesurferProps) => {
 
     useEffect(() => {
         if (!wavesurfer) return
+        console.log('Setando zoom');
         wavesurfer.zoom(zoom);
     }, [zoom]);
 
@@ -77,7 +78,6 @@ export const useWavesurfer = (containerRef, options: WavesurferProps) => {
                 return;
             }
         }
-
 
         if (!options) return
         if (!containerRef.current) return
@@ -128,8 +128,7 @@ export const useWavesurfer = (containerRef, options: WavesurferProps) => {
             },
         }));
         setTimeline(timelineInstance);
-
-        console.log('options url', options.url);
+        
         ws.load(options.url, !options.loadByUrl && options.peaks);
         setWavesurfer(ws);
 
@@ -142,11 +141,8 @@ export const useWavesurfer = (containerRef, options: WavesurferProps) => {
                 color: region.color,
                 drag: region.drag,
                 resize: region.resize,
-            });
-            console.log(region, 'region-created');
-        });
-
-        console.log('WS', ws);
+            });            
+        });        
 
         return () => {
             ws.destroy()

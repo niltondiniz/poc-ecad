@@ -1,10 +1,9 @@
-import { useRef, useState, useEffect } from "react"
+import { useRef, useState, useEffect, useCallback } from "react"
 import { useWavesurfer } from "../hooks/use-wavesurfer.hook"
 import { WavesurferProps } from "../interfaces/wavesurferProps.interface";
 
-
 export const WaveSurferPlayer = (props: WavesurferProps) => {
-    const containerRef = useRef();
+    const containerRef = useRef<HTMLDivElement>();
     const [isPlaying, setIsPlaying] = useState(false);
     const [isTooltipVisible, setTooltipVisible] = useState(false);
     const [tooltipPosition, setTooltipPosition] = useState({ x: 0, y: 0 });
@@ -12,9 +11,10 @@ export const WaveSurferPlayer = (props: WavesurferProps) => {
     const wavesurfer = useWavesurfer(containerRef, props);
     const [peakCounter, setPeakCounter] = useState(0);
     const [isLoading, setIsLoading] = useState(false);
-    const timerRef = useRef(null);
+    const timerRef = useRef<NodeJS.Timeout | null>(null);
+    const [currentTime, setCurrentTime] = useState(0);
 
-    const observeCanvasCreation = () => {
+    const observeCanvasCreation = useCallback(() => {
         const targetNode = document.querySelector('.waveformContainer');
         try {
             const shadowRootNode = targetNode.querySelector('div').shadowRoot
@@ -24,7 +24,7 @@ export const WaveSurferPlayer = (props: WavesurferProps) => {
 
             if (shadowRootNode) {
                 const node = shadowRootNode.querySelector('div');
-                var peaker = 0;
+                let peaker = 0;
                 const observer = new MutationObserver((mutationsList) => {
                     setIsLoading(true);
                     for (const mutation of mutationsList) {
@@ -33,7 +33,7 @@ export const WaveSurferPlayer = (props: WavesurferProps) => {
                             if (canvasTags.length > 0) {
                                 peaker = peaker + 1
                                 setPeakCounter(peaker);
-                                clearTimeout(timerRef.current);
+                                clearTimeout(timerRef.current!);
                                 timerRef.current = setTimeout(() => {
                                     setIsLoading(false);
                                 }, 500);
@@ -53,9 +53,9 @@ export const WaveSurferPlayer = (props: WavesurferProps) => {
             console.log(e);
             setIsLoading(false);
         }
-    };
+    }, []);
 
-    const registerOverEvent = (region, regionsArray) => {
+    const registerOverEvent = useCallback((region, regionsArray) => {
         region.on('over', () => {
             const content = wavesurfer.getTooltipContent(region, regionsArray);
             const posicao = tooltipPosition;
@@ -66,45 +66,52 @@ export const WaveSurferPlayer = (props: WavesurferProps) => {
         region.on('leave', () => {
             showToolTip(100, 100, false);
         });
-    };
+    }, [tooltipPosition, wavesurfer]);
 
-    const handleMouseMove = (e) => {
+    const handleMouseMove = useCallback((e) => {
         const mouseX = e.clientX;
         const mouseY = e.clientY;
         setTooltipPosition({ x: mouseX, y: mouseY });
-    };
+    }, []);
 
-    const showToolTip = (x, y, isVisible, content?) => {
+    const showToolTip = useCallback((x, y, isVisible, content?) => {
         setTooltipContent(content);
         setTooltipPosition({ x, y });
         setTooltipVisible(isVisible);
-    }
+    }, []);
 
     useEffect(() => {
+        if (!wavesurfer.wavesurfer) return;
 
-        if (!wavesurfer.wavesurfer) return
-
-        props.innerRef(wavesurfer);
-        props.registerEvent(registerOverEvent);
+        props.getWavesurferPlayerRef(wavesurfer);
+        props.registerOnMouseOverToRegion && props.registerOnMouseOverToRegion(registerOverEvent);
         setIsPlaying(false);
 
-        const subscriptions = eventSubscriptions(wavesurfer, setIsPlaying, props, setPeakCounter, observeCanvasCreation)
+        wavesurfer.wavesurfer.on('zoom', (zoom) => {
+            //setPeakCounter(0);
+            console.log('Disparou o zoom');
+            observeCanvasCreation();
+        });
+
+        const subscriptions = eventSubscriptions(wavesurfer, setIsPlaying, props, setPeakCounter, observeCanvasCreation, setCurrentTime);
 
         return () => {
-            subscriptions.forEach((unsub) => unsub())
-        }
-    }, [wavesurfer.wavesurfer, props])
+            subscriptions.forEach((unsub) => unsub());
+        };
+    }, [wavesurfer.wavesurfer, props, registerOverEvent, observeCanvasCreation]);
+
+    const formatTime = useCallback((time: number): string => {
+        const hours = Math.floor(time / 3600);
+        const minutes = Math.floor((time % 3600) / 60);
+        const seconds = Math.floor(time % 60);
+        return `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+    }, []);
 
     return (
         <div style={{ justifyContent: "center", alignItems: "center", width: '100%' }} >
             <div>
                 <div className="waveformContainer" ref={containerRef} style={{ minHeight: '220px', zIndex: 1, margin: 16 }} onMouseMove={handleMouseMove} />
-                {
-                    isLoading ?
-                        props.loadingComponent :
-                        <></>
-                }
-
+                {isLoading && props.loadingComponent}
             </div>
             {isTooltipVisible && (
                 <div
@@ -133,44 +140,57 @@ export const WaveSurferPlayer = (props: WavesurferProps) => {
 
                 </div>
             )}
+            <span style={{marginLeft:16}}>{
+                props.showInnerCurrentTime ?
+                    formatTime(currentTime) : <div></div>
+
+            }</span>
         </div>
     )
 }
 
-function eventSubscriptions(wavesurfer: { wavesurfer: any; wsRegions: any; minimap: any; minimapRegions: any; timeline: any; changeZoom: (zoom: any) => void; getTooltipContent: (region: any, regionsArray: any) => any; }, setIsPlaying, props: any, setPeakCounter, observeCanvasCreation: () => () => void) {
+function eventSubscriptions(wavesurfer: { wavesurfer: any; wsRegions: any; minimap: any; minimapRegions: any; timeline: any; changeZoom: (zoom: any) => void; getTooltipContent: (region: any, regionsArray: any) => any; }, setIsPlaying, props: any, setPeakCounter, observeCanvasCreation: () => () => void, setCurrentTime: any) {
     return [
         wavesurfer.wavesurfer.on('play', () => {
+            console.log('on play');
             setIsPlaying(true);
-            props.onPlay && props.onPlay();
+            props.onPlay && props.onPlay(true);
         }),
         wavesurfer.wavesurfer.on('pause', () => {
+            console.log('on pause');
             setIsPlaying(false);
+            props.onPlay && props.onPlay(false);
             props.onPause && props.onPause();
         }),
         wavesurfer.wavesurfer.on('timeupdate', (currentTime) => {
+            console.log('on time update');
+            setCurrentTime(currentTime);
             props.onTimeUpdate && props.onTimeUpdate(currentTime);
         }),
         wavesurfer.wavesurfer.on('loading', (percent) => {
-            console.log(`loading ${percent}%`);
+            console.log('on loading');
             props.onLoading && props.onLoading(percent);
         }),
         wavesurfer.wavesurfer.on('ready', (duration) => {
-            console.log(`ready ${duration}`);
+            console.log('on ready');
             props.onReady && props.onReady(duration);
         }),
         wavesurfer.wavesurfer.on('zoom', (zoom) => {
-            console.log('Vai analisar o zoom');
-            setPeakCounter(0);
+            //setPeakCounter(0);
+            console.log('Disparou o zoom');
             observeCanvasCreation();
         }),
         wavesurfer.wavesurfer.on('finish', () => {
+            console.log('on finish');
             setIsPlaying(false);
             props.onFinish && props.onFinish();
         }),
         wavesurfer.wsRegions.on('region-created', function (region) {
+            console.log('region-created');
             props.onRegionCreated && props.onRegionCreated(region);
         }),
         wavesurfer.wsRegions.on('region-in', function (region) {
+            console.log('region-in');
             props.onRegionIn && props.onRegionIn(region);
         }),
     ];
