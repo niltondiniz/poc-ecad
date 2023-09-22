@@ -12,8 +12,7 @@ pool:
 steps:
 - task: NodeAndNpmTool@1
   inputs:
-    versionSpec: '10.x'
-    checkLatest: true
+    versionSpec: '16.x'    
 
 - task: SonarQubePrepare@5
   inputs:
