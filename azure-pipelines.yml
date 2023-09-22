@@ -10,9 +10,13 @@ pool:
   vmImage: ubuntu-latest
 
 steps:
+- task: NodeTool@0
+  inputs:
+    versionSource: 'spec'
+    versionSpec: '18.x'
 - task: NodeAndNpmTool@1
   inputs:
-    versionSpec: '16.x'    
+    versionSpec: '18.x'    
 
 - task: SonarQubePrepare@5
   inputs:
