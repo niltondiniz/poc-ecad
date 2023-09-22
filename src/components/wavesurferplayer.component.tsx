@@ -1,6 +1,7 @@
 import { useRef, useState, useEffect, useCallback } from "react"
 import { useWavesurfer } from "../hooks/use-wavesurfer.hook"
 import { WavesurferProps } from "../interfaces/wavesurferProps.interface";
+import { log } from "../utils/log";
 
 export const WaveSurferPlayer = (props: WavesurferProps) => {
     const containerRef = useRef<HTMLDivElement>();
@@ -89,7 +90,7 @@ export const WaveSurferPlayer = (props: WavesurferProps) => {
 
         wavesurfer.wavesurfer.on('zoom', (zoom) => {
             //setPeakCounter(0);
-            console.log('Disparou o zoom');
+            log('Disparou o zoom');
             observeCanvasCreation();
         });
 
@@ -152,45 +153,45 @@ export const WaveSurferPlayer = (props: WavesurferProps) => {
 function eventSubscriptions(wavesurfer: { wavesurfer: any; wsRegions: any; minimap: any; minimapRegions: any; timeline: any; changeZoom: (zoom: any) => void; getTooltipContent: (region: any, regionsArray: any) => any; }, setIsPlaying, props: any, setPeakCounter, observeCanvasCreation: () => () => void, setCurrentTime: any) {
     return [
         wavesurfer.wavesurfer.on('play', () => {
-            console.log('on play');
+            log('on play');
             setIsPlaying(true);
             props.onPlay && props.onPlay(true);
         }),
         wavesurfer.wavesurfer.on('pause', () => {
-            console.log('on pause');
+            log('on pause');
             setIsPlaying(false);
             props.onPlay && props.onPlay(false);
             props.onPause && props.onPause();
         }),
         wavesurfer.wavesurfer.on('timeupdate', (currentTime) => {
-            console.log('on time update');
+            log('on time update');
             setCurrentTime(currentTime);
             props.onTimeUpdate && props.onTimeUpdate(currentTime);
         }),
         wavesurfer.wavesurfer.on('loading', (percent) => {
-            console.log('on loading');
+            log('on loading');
             props.onLoading && props.onLoading(percent);
         }),
         wavesurfer.wavesurfer.on('ready', (duration) => {
-            console.log('on ready');
+            log('on ready');
             props.onReady && props.onReady(duration);
         }),
         wavesurfer.wavesurfer.on('zoom', (zoom) => {
             //setPeakCounter(0);
-            console.log('Disparou o zoom');
+            log('Disparou o zoom');
             observeCanvasCreation();
         }),
         wavesurfer.wavesurfer.on('finish', () => {
-            console.log('on finish');
+            log('on finish');
             setIsPlaying(false);
             props.onFinish && props.onFinish();
         }),
         wavesurfer.wsRegions.on('region-created', function (region) {
-            console.log('region-created');
+            log('region-created');
             props.onRegionCreated && props.onRegionCreated(region);
         }),
         wavesurfer.wsRegions.on('region-in', function (region) {
-            console.log('region-in');
+            log('region-in');
             props.onRegionIn && props.onRegionIn(region);
         }),
     ];
