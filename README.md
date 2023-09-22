@@ -35,7 +35,6 @@ import AddIcon from '@mui/icons-material/Add';
 import RemoveIcon from '@mui/icons-material/Remove';
 import { useState } from "react";
 
-
 export default function MinimalComponent() {
 
     //Variável que armazena uma instância da Wavesurfer
@@ -153,6 +152,8 @@ export default function MinimalComponent() {
             </div>
 
         </div>
+ )
+}
 ```
 
 ## App component
@@ -439,8 +440,4 @@ export const App = () => {
     </div >
   );
 };
-```
-
-    )
-}
 ```
