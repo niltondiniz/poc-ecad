@@ -1,0 +1,27 @@
+export interface WavesurferProps {
+    loadByUrl: boolean,
+    wavesurferHeight?: number,
+    container?: any,
+    wavesurferFillParent?: boolean,
+    wavesurferHideScrollbar?: boolean,
+    wavesurferWaveColor?: string,
+    wavesurferProgressColor?: string,
+    wavesurferCursorColor?: string,
+    wavesurferCursorWidth?: number,
+    wavesurferAutoScroll?: boolean,
+    wavesurferAutoCenter?: boolean,
+    wavesurferMediaControls?: boolean,
+    wavesurferBarWidth?: number,
+    innerRef?: any,
+    registerEvent?: any,
+    url?: string,
+    peaks?: any,
+    loadingComponent?: any,
+    minimapHeight?: number
+    minimapWaveColor?: string
+    minimapProgressColor?: string,
+    timelineHeight?: number,
+    timelinePrimaryLabelInterval?: number,
+    timelineFontSize?: string,
+    timelineFontColor?: string,
+}

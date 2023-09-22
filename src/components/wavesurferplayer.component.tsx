@@ -1,20 +1,21 @@
-import { useRef, useState, useCallback, useEffect } from "react"
+import { useRef, useState, useEffect } from "react"
 import { useWavesurfer } from "../hooks/use-wavesurfer.hook"
-import { Slider } from "rsuite";
+import { WavesurferProps } from "../interfaces/wavesurferProps.interface";
 
-export const WaveSurferPlayer = (props) => {
+
+export const WaveSurferPlayer = (props: WavesurferProps) => {
     const containerRef = useRef();
     const [isPlaying, setIsPlaying] = useState(false);
-    const [currentTime, setCurrentTime] = useState(0);
+    const [isTooltipVisible, setTooltipVisible] = useState(false);
+    const [tooltipPosition, setTooltipPosition] = useState({ x: 0, y: 0 });
+    const [tooltipContent, setTooltipContent] = useState('');
     const wavesurfer = useWavesurfer(containerRef, props);
     const [peakCounter, setPeakCounter] = useState(0);
     const [isLoading, setIsLoading] = useState(false);
-
     const timerRef = useRef(null);
-    const observeCanvasCreation = () => {
-        console.log('Vai observar a criação de canvas');
-        const targetNode = document.querySelector('.treco');
 
+    const observeCanvasCreation = () => {
+        const targetNode = document.querySelector('.waveformContainer');
         try {
             const shadowRootNode = targetNode.querySelector('div').shadowRoot
                 .querySelector('div')
@@ -23,7 +24,6 @@ export const WaveSurferPlayer = (props) => {
 
             if (shadowRootNode) {
                 const node = shadowRootNode.querySelector('div');
-
                 var peaker = 0;
                 const observer = new MutationObserver((mutationsList) => {
                     setIsLoading(true);
@@ -31,15 +31,10 @@ export const WaveSurferPlayer = (props) => {
                         if (mutation.type === 'childList' && mutation.addedNodes.length > 0) {
                             const canvasTags = node.querySelectorAll('canvas');
                             if (canvasTags.length > 0) {
-
                                 peaker = peaker + 1
                                 setPeakCounter(peaker);
-
-                                // Reiniciar o temporizador quando um novo canvas é detectado
                                 clearTimeout(timerRef.current);
                                 timerRef.current = setTimeout(() => {
-                                    // Ação a ser realizada após 3 segundos sem novos canvas
-                                    console.log('Nenhum novo canvas por 3 segundos.');
                                     setIsLoading(false);
                                 }, 500);
                             }
@@ -60,80 +55,40 @@ export const WaveSurferPlayer = (props) => {
         }
     };
 
+    const registerOverEvent = (region, regionsArray) => {
+        region.on('over', () => {
+            const content = wavesurfer.getTooltipContent(region, regionsArray);
+            const posicao = tooltipPosition;
+            if (content.showTooltip) {
+                showToolTip(posicao.x, posicao.y + 200, true, content.content);
+            }
+        });
+        region.on('leave', () => {
+            showToolTip(100, 100, false);
+        });
+    };
+
+    const handleMouseMove = (e) => {
+        const mouseX = e.clientX;
+        const mouseY = e.clientY;
+        setTooltipPosition({ x: mouseX, y: mouseY });
+    };
+
+    const showToolTip = (x, y, isVisible, content?) => {
+        setTooltipContent(content);
+        setTooltipPosition({ x, y });
+        setTooltipVisible(isVisible);
+    }
+
     useEffect(() => {
+
         if (!wavesurfer.wavesurfer) return
 
         props.innerRef(wavesurfer);
+        props.registerEvent(registerOverEvent);
+        setIsPlaying(false);
 
-        setCurrentTime(0)
-        setIsPlaying(false)
-        
-        const subscriptions = [
-            wavesurfer.wavesurfer.on('play', () => {
-                setIsPlaying(true);
-                props.onPlay && props.onPlay();
-            }),
-            wavesurfer.wavesurfer.on('pause', () => {
-                setIsPlaying(false);
-                props.onPause && props.onPause();
-            }),
-            wavesurfer.wavesurfer.on('timeupdate', (currentTime) => {
-                setCurrentTime(currentTime);
-                props.onTimeUpdate && props.onTimeUpdate(currentTime);
-            }),
-            wavesurfer.wavesurfer.on('loading', (percent) => {
-                console.log(`loading ${percent}%`);
-                props.onLoading && props.onLoading(percent);
-            }),
-            wavesurfer.wavesurfer.on('ready', (duration) => {
-                console.log(`ready ${duration}`);
-                props.onReady && props.onReady(duration);
-            }),
-            wavesurfer.wavesurfer.on('zoom', (zoom) => {
-                console.log('Vai analisar o zoom');
-                setPeakCounter(0);
-                observeCanvasCreation();
-            }),
-            wavesurfer.wavesurfer.on('finish', () => {
-                setIsPlaying(false);
-                props.onFinish && props.onFinish();
-            }),
-            wavesurfer.wsRegions.on('region-created', function (region) {
-                        
-                // region.on('over', () => {
-                //     console.log(region, 'over');
-                //     const posicao = obterPosicaoAbsoluta(region.element);
-                //     console.log('Position', posicao);
-                //     showToolTip(posicao.x, posicao.y + 200, true);
-                // });
-                // region.on('leave', () => {
-                //     console.log(region, 'leave');
-                //     showToolTip(100, 100, false);
-                // });
-                props.onRegionCreated && props.onRegionCreated(region);
-                wavesurfer.minimapRegions.addRegion({
-                    id: region.id,
-                    start: region.start,
-                    end: region.end,
-                    color: region.color,
-                    drag: region.drag,
-                    resize: region.resize,
-                });
-                wavesurfer.minimapRegions.addRegion({
-                    start: region.start,
-                    end: region.end,
-                    color: region.color,
-                    drag: region.drag,
-                    resize: region.resize,
-                });
-                console.log(region, 'region-created');
-            }),
-            wavesurfer.wsRegions.on('region-in', function (region) {
-                console.log(region, 'region-in');
-                props.onRegionIn && props.onRegionIn(region);
-            }),
-
-        ]
+        const subscriptions = eventSubscriptions(wavesurfer, setIsPlaying, props, setPeakCounter, observeCanvasCreation)
 
         return () => {
             subscriptions.forEach((unsub) => unsub())
@@ -143,20 +98,80 @@ export const WaveSurferPlayer = (props) => {
     return (
         <div style={{ justifyContent: "center", alignItems: "center", width: '100%' }} >
             <div>
+                <div className="waveformContainer" ref={containerRef} style={{ minHeight: '220px', zIndex: 1, margin: 16 }} onMouseMove={handleMouseMove} />
                 {
                     isLoading ?
-                        <center>
-                            <div style={{ width: '100%', minHeight: props.height, zIndex: 10, height: 130, backgroundColor: 'blue', opacity: 0.7, position: 'absolute', left: 0, top: 0 }}>
-                                <h1 style={{ color: 'white', fontSize: 20, marginTop: 5 }}>Processando...{peakCounter}</h1>
-                                <img alt="wavesurfer" style={{ width: 50 }} src="https://cdn.pixabay.com/animation/2023/03/20/02/45/02-45-27-186_512.gif" />
-
-                            </div>
-                        </center> :
+                        props.loadingComponent :
                         <></>
                 }
-                <div className="treco" ref={containerRef} style={{ minHeight: '220px', zIndex: 1, margin: 16 }} />
-                
+
             </div>
+            {isTooltipVisible && (
+                <div
+                    id="tooltip"
+                    className="tooltip"
+                    style={{
+                        position:
+                            'absolute',
+                        left: tooltipPosition.x + 16,
+                        top: tooltipPosition.y,
+                        maxWidth: 250,
+                        backgroundColor: '#6a5e5e',
+                        opacity: 0.9,
+                        borderRadius: 9,
+                        zIndex: 1000,
+                        justifyContent: 'center',
+                        alignItems: 'center',
+                        textAlign: 'left',
+                        padding: 16,
+                        color: '#f9f7f7',
+                        fontWeight: '500',
+
+                    }}
+                >
+                    {tooltipContent}
+
+                </div>
+            )}
         </div>
     )
+}
+
+function eventSubscriptions(wavesurfer: { wavesurfer: any; wsRegions: any; minimap: any; minimapRegions: any; timeline: any; changeZoom: (zoom: any) => void; getTooltipContent: (region: any, regionsArray: any) => any; }, setIsPlaying, props: any, setPeakCounter, observeCanvasCreation: () => () => void) {
+    return [
+        wavesurfer.wavesurfer.on('play', () => {
+            setIsPlaying(true);
+            props.onPlay && props.onPlay();
+        }),
+        wavesurfer.wavesurfer.on('pause', () => {
+            setIsPlaying(false);
+            props.onPause && props.onPause();
+        }),
+        wavesurfer.wavesurfer.on('timeupdate', (currentTime) => {
+            props.onTimeUpdate && props.onTimeUpdate(currentTime);
+        }),
+        wavesurfer.wavesurfer.on('loading', (percent) => {
+            console.log(`loading ${percent}%`);
+            props.onLoading && props.onLoading(percent);
+        }),
+        wavesurfer.wavesurfer.on('ready', (duration) => {
+            console.log(`ready ${duration}`);
+            props.onReady && props.onReady(duration);
+        }),
+        wavesurfer.wavesurfer.on('zoom', (zoom) => {
+            console.log('Vai analisar o zoom');
+            setPeakCounter(0);
+            observeCanvasCreation();
+        }),
+        wavesurfer.wavesurfer.on('finish', () => {
+            setIsPlaying(false);
+            props.onFinish && props.onFinish();
+        }),
+        wavesurfer.wsRegions.on('region-created', function (region) {
+            props.onRegionCreated && props.onRegionCreated(region);
+        }),
+        wavesurfer.wsRegions.on('region-in', function (region) {
+            props.onRegionIn && props.onRegionIn(region);
+        }),
+    ];
 }

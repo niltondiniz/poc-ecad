@@ -1,11 +1,8 @@
 import { useState, useCallback, useEffect } from 'react';
 import "rsuite/dist/rsuite.min.css";
 import { WaveSurferPlayer } from './components/wavesurferplayer.component';
-
 import { Slider } from 'rsuite';
 
-
-// Componente principal que renderiza dois players de áudio
 export const App = () => {
 
   const urls = ['audio.mp3', 'audio_.mp3'];
@@ -15,52 +12,27 @@ export const App = () => {
   const [peaks, setPeaks] = useState([0]);
   const [zoom, setZoom] = useState(0);
   const [regions, setRegions] = useState([]);
-  const [isTooltipVisible, setTooltipVisible] = useState(false);
-  const [tooltipPosition, setTooltipPosition] = useState({ x: 0, y: 0 });
-  const [tooltipContent, setTooltipContent] = useState('');
 
+  //Variáveis para manipular o componente WaveSurferPlayer
   var wavesurferRef = null;
-
-  const handleMouseMove = (e) => {
-    const mouseX = e.clientX;
-    const mouseY = e.clientY;
-    setTooltipPosition({ x: mouseX, y: mouseY });
-  };
-
-  const showToolTip = (x, y, isVisible, content?) => {
-    console.log('showToolTip', x, y, isVisible);
-    setTooltipContent(content);
-    setTooltipPosition({ x, y });
-    setTooltipVisible(isVisible);
-  }
-
-  function obterPosicaoAbsoluta(elemento) {
-    let posicaoX = 0;
-    let posicaoY = 0;
-
-    while (elemento) {
-      posicaoX += elemento.offsetLeft;
-      posicaoY += elemento.offsetTop;
-      elemento = elemento.offsetParent;
-    }
-
-    return { x: posicaoX, y: posicaoY };
-  }
+  var registerEvent = null;
 
   function setRef(ref) {
     wavesurferRef = ref;
+  }
+
+  function setRegisterEvent(event) {
+    registerEvent = event;
   }
 
   useEffect(() => {
     fetch(`http://localhost:3001/download/${peakUrl}`)
       .then(response => response.json())
       .then(data => {
-        console.log('Peaks carregados: ', data.data);
         setPeaks(data.data);
       });
   }, [peakUrl]);
 
-  // Alterna a URL do arquivo de áudio
   const onUrlChange = useCallback(() => {
     urls.reverse();
     peakNames.reverse();
@@ -68,170 +40,200 @@ export const App = () => {
     setPeakUrl(`${peakNames[0]}.json`);
   }, [urls, peakNames]);
 
-  const getTooltipContent = (region, regionsArray) => {
-    const contentRegion = regionsArray.find(r => r.id === region.id);
-    if (contentRegion) {
-      return contentRegion.content;
-    }
-  };
+  const loadingComponent = (
+    <center>
+      <div style={{
+        display: 'flex',
+        width: '100%',
+        zIndex: 10,
+        height: 70,
+        backgroundColor: 'blue',
+        opacity: 0.7,
+        position: 'absolute',
+        left: 0,
+        top: 0,
+        flexDirection: 'row',
+        justifyContent: 'center',
+        alignItems: 'center',
+      }}>
+        <h1 style={{ color: 'white', fontSize: 20, marginTop: 5 }}>Estamos renderizando seu áudio, mas você pode interagir enquanto isso. </h1>
+        <img alt="wavesurfer" style={{ width: 50 }} src="https://cdn.pixabay.com/animation/2023/03/20/02/45/02-45-27-186_512.gif" />
+      </div>
+    </center>
+  );
 
-  const registerOverEvent = (region, regionsArray) => {
-    // Registre o evento 'over' para a região fornecida
-    region.on('over', () => {
-      const content = getTooltipContent(region, regionsArray);
-      console.log('Encontrou o conteudo ', content);
-      const posicao = obterPosicaoAbsoluta(region.element);
-      showToolTip(posicao.x, posicao.y + 200, true, content);
-    });
-    region.on('leave', () => {
-      console.log(region, 'leave');
-      showToolTip(100, 100, false);
-    });
-  };
-
-  // Renderiza os players de áudio e o botão de troca de URL
-  //console.log('Vai renderizar player', peaks);
   return (
     peaks.length > 0 &&
-    <div style={{ margin: 46 }} onMouseMove={handleMouseMove}>
+    <div style={{ margin: 46 }}>
       <WaveSurferPlayer
+        loadByUrl={false}
         innerRef={setRef}
-        getTooltipContent={getTooltipContent}
-        height={200}
-        fillParent={true}
-        waveColor="#ff5500"
-        progressColor="rgb(100, 0, 100, 0)"
+        registerEvent={setRegisterEvent}
+        wavesurferHeight={200}
+        wavesurferFillParent={true}
+        wavesurferWaveColor="#ff5500"
+        wavesurferProgressColor="rgb(100, 0, 100, 0)"
         url={audioUrl}
         peaks={peaks}
-        cursorColor="#1f1e1e"
-        mediaControls={false}
-
+        wavesurferCursorColor="#1f1e1e"
+        wavesurferMediaControls={false}
+        loadingComponent={loadingComponent}
       />
-      <button onClick={onUrlChange}>Carregar áudio</button>
 
-      <div style={{ marginBottom: 36, marginTop: 36 }}>
-        <button onClick={() => {
+      <div style={{ display: 'flex', flexDirection: 'row', width: '100%' }}>
+        <button style={{ margin: 16 }} onClick={onUrlChange}>Carregar áudio</button>
+        <div style={{ margin: 16 }}>
+          <button onClick={() => {
 
-          const idNewRegion = Math.random();
+            const idNewRegion = Math.random();
 
-          const tooltipContent = (
-            <div>
-              <h4>Título</h4>
-              <p>Este é um parágrafo de exemplo.</p>
-              <ul>
-                <li>{idNewRegion}</li>
-                <li>Autor: Nilton Diniz</li>
-                <li>Musica: Teste de musica</li>
-                <li>Ano: Teste de ano</li>
-              </ul>
-            </div>
-          )
+            const tooltipContent = (
+              <div>
+                <h4>Título</h4>
+                <p>Este é um parágrafo de exemplo.</p>
+                <ul>
+                  <li>{idNewRegion}</li>
+                  <li>Autor: Nilton Diniz</li>
+                  <li>Musica: Teste de musica</li>
+                  <li>Ano: {Math.random()}</li>
+                </ul>
+              </div>
+            )
 
-          const newContentRegion = { id: idNewRegion, content: tooltipContent };
+            const newContentRegion = { id: idNewRegion, content: tooltipContent, showTooltip: true };
 
-          setRegions([...regions, newContentRegion]);
+            setRegions([...regions, newContentRegion]);
 
-          const newRegion = wavesurferRef.wsRegions.addRegion({
-            id: idNewRegion,
-            start: wavesurferRef.wavesurfer.getCurrentTime(),
-            end: wavesurferRef.wavesurfer.getCurrentTime() + 10,
-            color: 'hsla(100, 100%, 30%, 0.5)',
-            drag: false,
-            resize: false,
-          });
+            const newRegion = wavesurferRef.wsRegions.addRegion({
+              id: idNewRegion,
+              start: wavesurferRef.wavesurfer.getCurrentTime(),
+              end: wavesurferRef.wavesurfer.getCurrentTime() + 10,
+              color: 'hsla(100, 100%, 30%, 0.5)',
+              drag: false,
+              resize: false,
+            });
 
-          console.log('Nova regiao', [[...regions, newContentRegion]]);
+            registerEvent(newRegion, [...regions, newContentRegion]);
 
-          registerOverEvent(newRegion, [...regions, newContentRegion]);
+            const newMinimapRegion = wavesurferRef.minimapRegions.addRegion({
+              id: newRegion.id,
+              start: newRegion.start,
+              end: newRegion.end,
+              color: newRegion.color,
+              drag: newRegion.drag,
+              resize: newRegion.resize,
+            });
 
-        }}>Add Region</button>
-      </div>
+            registerEvent(newMinimapRegion, [...regions, newContentRegion]);
 
-      <div style={{ marginBottom: 36, marginTop: 36 }}>
-        <button onClick={() => {
-          wavesurferRef.wsRegions.addRegion({
-            start: wavesurferRef.wavesurfer.getCurrentTime(),
-            color: '#000000',
-            drag: false,
-            resize: false
-          });
-        }}>Add Marker</button>
-
-      </div>
-
-      <div style={{ marginBottom: 36, marginTop: 36 }}>
-        <button onClick={() => {
-          setZoom(Math.random());
-        }}>Atualizando estado</button>
-
-      </div>
-
-      <div style={{ margin: 16, width: 500 }}>
-        <Slider
-          defaultValue={0}
-          min={0}
-          max={100}
-          progress
-          style={{ marginTop: 16 }}
-          renderMark={mark => {
-            return mark;
-          }}
-          onChange={(value) => {
-            wavesurferRef.changeZoom(value);
-          }}
-        />
-      </div>
-
-      <div style={{ marginBottom: 36, marginTop: 36 }}>
-        <button onClick={() => {
-          console.log('wavesurferRef', wavesurferRef)
-          wavesurferRef.wsRegions.clearRegions();
-          wavesurferRef.minimapRegions.clearRegions();
-        }}>Remove all regions</button>
-      </div>
-
-      <div style={{ marginBottom: 36, marginTop: 36 }}>
-        <button onClick={() => {
-          wavesurferRef.wsRegions.wavesurfer.play();
-        }}>Play</button>
-
-      </div>
-
-      <div style={{ marginBottom: 36, marginTop: 36 }}>
-        <button onClick={() => {
-          wavesurferRef.wsRegions.wavesurfer.pause();
-        }}>Pause</button>
-
-      </div>
-
-      {isTooltipVisible && (
-        <div
-          id="tooltip"
-          className="tooltip"
-          style={{
-            position:
-              'absolute',
-            left: tooltipPosition.x + 16,
-            top: tooltipPosition.y,
-            maxWidth: 250,
-            backgroundColor: '#6a5e5e',
-            opacity: 0.9,
-            borderRadius: 9,
-            zIndex: 1000,
-            justifyContent: 'center',
-            alignItems: 'center',
-            textAlign: 'left',
-            padding: 16,
-            color: '#f9f7f7',
-            fontWeight: '500',
-
-          }}
-        >
-          {tooltipContent}
-
+          }}>Add Region</button>
         </div>
-      )}
 
-    </div>
+        <div style={{ margin: 16 }}>
+          <button onClick={() => {
+            wavesurferRef.wsRegions.addRegion({
+              start: wavesurferRef.wavesurfer.getCurrentTime(),
+              color: '#000000',
+              drag: false,
+              resize: false
+            });
+          }}>Add Marker</button>
+        </div>
+
+        <div style={{ margin: 16 }}>
+          <button onClick={() => {
+            setZoom(Math.random());
+          }}>Atualizando estado</button>
+        </div>
+      </div>
+
+      <div style={{ display: 'flex', flexDirection: 'row', width: '100%' }}>
+        <div style={{ margin: 16, width: 500 }}>
+          <Slider
+            defaultValue={0}
+            min={0}
+            max={100}
+            progress
+            style={{ marginTop: 16 }}
+            renderMark={mark => {
+              return mark;
+            }}
+            onChange={(value) => {
+              wavesurferRef.changeZoom(value);
+            }}
+          />
+        </div>
+      </div>
+
+      <div style={{ display: 'flex', flexDirection: 'row', width: '100%' }}>
+        <div style={{ margin: 16 }}>
+          <button onClick={() => {
+            wavesurferRef.wsRegions.clearRegions();
+            wavesurferRef.minimapRegions.clearRegions();
+          }}>Remove all regions</button>
+        </div>
+
+        <div style={{ margin: 16 }}>
+          <button onClick={() => {
+            wavesurferRef.wsRegions.wavesurfer.play();
+          }}>Play</button>
+        </div>
+
+        <div style={{ margin: 16 }}>
+          <button onClick={() => {
+            wavesurferRef.wsRegions.wavesurfer.pause();
+          }}>Pause</button>
+        </div>
+
+        <div style={{ margin: 16 }}>
+          <button onClick={() => {
+            wavesurferRef.toNextRegion();
+          }}>Next</button>
+        </div>
+
+        <div style={{ margin: 16 }}>
+          <button onClick={() => {
+            wavesurferRef.toPreviousRegion();
+          }}>Previous</button>
+        </div>
+
+        <div style={{ margin: 16 }}>
+          <button onClick={() => {
+            wavesurferRef.wavesurfer.seekTo(0);
+          }}>Inicio</button>
+        </div>
+
+        <div style={{ margin: 16 }}>
+          <button onClick={() => {
+            wavesurferRef.wavesurfer.seekTo(1);
+          }}>Fim</button>
+        </div>
+
+        <div style={{ margin: 16 }}>
+          <button onClick={() => {
+            wavesurferRef.wavesurfer.setTime(wavesurferRef.wavesurfer.getCurrentTime() + 10);
+          }}>+10</button>
+        </div>
+
+        <div style={{ margin: 16 }}>
+          <button onClick={() => {
+            wavesurferRef.wavesurfer.setTime(wavesurferRef.wavesurfer.getCurrentTime() - 10);
+          }}>-10</button>
+        </div>
+
+        <div style={{ margin: 16 }}>
+          <button onClick={() => {
+            wavesurferRef.wavesurfer.setPlaybackRate(wavesurferRef.wavesurfer.getPlaybackRate() + 0.1);
+          }}>Speed +</button>
+        </div>
+
+        <div style={{ margin: 16 }}>
+          <button onClick={() => {
+            wavesurferRef.wavesurfer.setPlaybackRate(wavesurferRef.wavesurfer.getPlaybackRate() - 0.1);
+          }}>Speed -</button>
+        </div>
+
+      </div>
+    </div >
   );
 };

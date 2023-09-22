@@ -3,8 +3,9 @@ import WaveSurfer from "wavesurfer.js";
 import TimelinePlugin from "wavesurfer.js/dist/plugins/timeline.esm.js";
 import MinimapPlugin from "wavesurfer.js/dist/plugins/minimap.esm.js";
 import RegionsPlugin from 'wavesurfer.js/dist/plugins/regions.esm.js'
+import { WavesurferProps } from "../interfaces/wavesurferProps.interface";
 
-export const useWavesurfer = (containerRef, options) => {
+export const useWavesurfer = (containerRef, options: WavesurferProps) => {
     const [wavesurfer, setWavesurfer] = useState(null);
     const [wsRegions, setWsRegions] = useState(null);
     const [minimapRegions, setMinimapWsRegions] = useState(null);
@@ -13,90 +14,129 @@ export const useWavesurfer = (containerRef, options) => {
     const [zoom, setZoom] = useState(0);
 
     const changeZoom = (zoom) => {
-        console.log('Chamou changeZoom', zoom);
         setZoom(zoom);
     }
 
+    const getTooltipContent = (region, regionsArray) => {
+        const contentRegion = regionsArray.find(r => r.id === region.id);
+        if (contentRegion) {
+            return contentRegion;
+        }
+    };
+
+    const toNextRegion = () => {
+        const currentCursorTime = wavesurfer.getCurrentTime();
+        const regions = wsRegions.getRegions();
+        let nextRegion = null;
+
+        // Encontre a próxima região após o cursor atual
+        for (const regionId in regions) {
+            const region = regions[regionId];
+            if (region.start > currentCursorTime) {
+                if (!nextRegion || region.start < nextRegion.start) {
+                    nextRegion = region;
+                }
+            }
+        }
+
+        // Verifique se há uma próxima região e posicione o cursor nela
+        if (nextRegion) {
+            wavesurfer.setTime(nextRegion.start);
+        }
+    }
+
+    const toPreviousRegion = () => {
+        const currentCursorTime = wavesurfer.getCurrentTime();
+        const regions = wsRegions.getRegions();
+        let previousRegion = null;
+
+        // Encontre a próxima região após o cursor atual
+        for (const regionId in regions) {
+            const region = regions[regionId];
+            if (region.start < currentCursorTime) {
+                if (!previousRegion || region.start > previousRegion.start) {
+                    previousRegion = region;
+                }
+            }
+        }
+
+        // Verifique se há uma próxima região e posicione o cursor nela
+        if (previousRegion) {
+            wavesurfer.setTime(previousRegion.start);
+        }
+    }
+
     useEffect(() => {
-        console.log('trabalhando o useEffect do zoom', zoom);
         if (!wavesurfer) return
         wavesurfer.zoom(zoom);
     }, [zoom]);
 
     useEffect(() => {
-        console.log('options peaks', options.peaks);
-        if(options.peaks.length === 1) {
-            console.log('Não tem peaks');
-            return;
-        }else{
-            console.log('Tem peaks');
+        if (!options.loadByUrl) {
+            if (options.peaks.length === 1) {
+                return;
+            }
         }
 
-        if(!options) return        
-        if (!containerRef.current) return 
 
-        console.log(options);
+        if (!options) return
+        if (!containerRef.current) return
 
-        //Crio as regiões
         const regions = RegionsPlugin.create()
         setWsRegions(regions);
 
         const minimapRegions = RegionsPlugin.create()
-        setMinimapWsRegions(minimapRegions);        
+        setMinimapWsRegions(minimapRegions);
 
-        //Crio o wavesurfer
         const ws = WaveSurfer.create({
-            height: options.height,
-            //url: options.url,
+            height: options.wavesurferHeight,
             container: containerRef.current,
-            fillParent: options.fillParent !== undefined ? options.fillParent : false,
-            hideScrollbar: options.hideScrollbar !== undefined ? options.hideScrollbar : false,
-            waveColor: options.waveColor !== undefined ? options.waveColor : '#ff4e00',
-            progressColor: options.progressColor !== undefined ? options.progressColor : 'rgb(100, 0, 100, 0.1)',
-            cursorColor: options.cursorColor !== undefined ? options.cursorColor : '#ddd5e9',
-            cursorWidth: options.cursorWidth !== undefined ? options.cursorWidth : 2,
-            autoScroll: options.autoScroll !== undefined ? options.autoScroll : true,
-            autoCenter: options.autoCenter !== undefined ? options.autoCenter : true,
-            mediaControls: options.mediaControls !== undefined ? options.mediaControls : true,
-            barWidth: options.barWidth !== undefined ? options.barWidth : 2,
-            //minPxPerSec: options.minPxPerSec !== undefined ? options.minPxPerSec : 100,
-            plugins: [                
+            fillParent: options.wavesurferFillParent !== undefined ? options.wavesurferFillParent : false,
+            hideScrollbar: options.wavesurferHideScrollbar !== undefined ? options.wavesurferHideScrollbar : false,
+            waveColor: options.wavesurferWaveColor !== undefined ? options.wavesurferWaveColor : '#ff4e00',
+            progressColor: options.wavesurferProgressColor !== undefined ? options.wavesurferProgressColor : 'rgb(100, 0, 100, 0.1)',
+            cursorColor: options.wavesurferCursorColor !== undefined ? options.wavesurferCursorColor : '#ddd5e9',
+            cursorWidth: options.wavesurferCursorWidth !== undefined ? options.wavesurferCursorWidth : 2,
+            autoScroll: options.wavesurferAutoScroll !== undefined ? options.wavesurferAutoScroll : true,
+            autoCenter: options.wavesurferAutoCenter !== undefined ? options.wavesurferAutoCenter : true,
+            mediaControls: options.wavesurferMediaControls !== undefined ? options.wavesurferMediaControls : true,
+            barWidth: options.wavesurferBarWidth !== undefined ? options.wavesurferBarWidth : 2,
+            plugins: [
                 regions,
             ],
 
         });
 
         const minimapInstance = ws.registerPlugin(MinimapPlugin.create({
-            height: 40,
-            waveColor: '#ddd',
+            height: options.minimapHeight !== undefined ? options.minimapHeight : 40,
+            waveColor: options.minimapWaveColor !== undefined ? options.minimapWaveColor : '#ddd',
             progressColor
-                : '#999',
+                : options.minimapProgressColor !== undefined ? options.minimapProgressColor : '#999',
             plugins: [
                 minimapRegions,
             ]
         }));
         setMinimap(minimapInstance);
 
-        //Crio o timeline
+
         const timelineInstance = ws.registerPlugin(TimelinePlugin.create({
-            height: 20,
-            //timeInterval: 30,
-            primaryLabelInterval: 10,
+            height: options.timelineHeight !== undefined ? options.timelineHeight : 20,
+            primaryLabelInterval: options.timelinePrimaryLabelInterval !== undefined ? options.timelinePrimaryLabelInterval : 10,
             style: {
-                fontSize: '10px',
-                color: '#6A3274',
+                fontSize: options.timelineFontSize !== undefined ? options.timelineFontSize : '10px',
+                color: options.timelineFontColor !== undefined ? options.timelineFontColor : '#6A3274',
             },
         }));
         setTimeline(timelineInstance);
 
         console.log('options url', options.url);
-        ws.load(options.url, options.peaks);
-        setWavesurfer(ws);        
+        ws.load(options.url, !options.loadByUrl && options.peaks);
+        setWavesurfer(ws);
 
         regions.on('remove', function (region) {
             //Ao criar uma região, adiciono ela no minimap
-            minimapRegions.addRegion({   
-                id: region.id,             
+            minimapRegions.addRegion({
+                id: region.id,
                 start: region.start,
                 end: region.end,
                 color: region.color,
@@ -104,14 +144,14 @@ export const useWavesurfer = (containerRef, options) => {
                 resize: region.resize,
             });
             console.log(region, 'region-created');
-        });        
+        });
 
         console.log('WS', ws);
 
         return () => {
             ws.destroy()
         }
-    }, [options.peaks])    
+    }, [options.peaks])
 
-    return {wavesurfer, wsRegions, minimap, minimapRegions, timeline, changeZoom}
+    return { wavesurfer, wsRegions, minimap, minimapRegions, timeline, changeZoom, getTooltipContent, toNextRegion, toPreviousRegion }
 }
