@@ -259,12 +259,12 @@ export const App = () => {
   );
 
   return (
-    /*
-      Instanciando o componente WaveSurferPlayer. O props está tipado, 
-      verificar o arquivo wavesurferProps.interface.tsx para mais detalhes sobre os atributos.
-      Em resumo todas as funcionalidades utilizadas no waveform do ECAD podem ser utilizadas aqui.
-      Por exemplo, customização de cores, eventos e etc.    
-    */
+    
+    //  Instanciando o componente WaveSurferPlayer. O props está tipado, 
+    //  verificar o arquivo wavesurferProps.interface.tsx para mais detalhes sobre os atributos.
+    //  Em resumo todas as funcionalidades utilizadas no waveform do ECAD podem ser utilizadas aqui.
+    //  Por exemplo, customização de cores, eventos e etc.    
+    
     peaks.length > 0 &&
     <div style={{ margin: 46 }}>
       <WaveSurferPlayer
@@ -300,11 +300,11 @@ export const App = () => {
 
             const idNewRegion = Math.random();
 
-            /*Este componente jsx será exibido no tooltip
-              O componente pode ser qualquer coisa, inclusive outro componente React
-              O importante é colocar aqui as informações que estão na documentação do ECAD
-              Bem provável que aqui serão exibidas informações da região, como duração, inicio e fim, autor, musica e etc.
-            */
+            //Este componente jsx será exibido no tooltip
+            //O componente pode ser qualquer coisa, inclusive outro componente React
+            //O importante é colocar aqui as informações que estão na documentação do ECAD
+            //Bem provável que aqui serão exibidas informações da região, como duração, inicio e fim, autor, musica e etc.
+            
             const tooltipContent = (
               <div>
                 <h4>Título</h4>
