@@ -157,7 +157,7 @@ export const App = () => {
             const newRegion = wavesurfer.wsRegions.addRegion({
               id: idNewRegion,
               start: wavesurfer.wavesurfer.getCurrentTime(),
-              end: wavesurfer.wavesurfer.getCurrentTime() + 10,
+              end: wavesurfer.wavesurfer.getCurrentTime() + 100,
               color: `#${getTwoRandomNumbers()}${getTwoRandomNumbers()}${getTwoRandomNumbers()}B0`,
               drag: false,
               resize: false,
