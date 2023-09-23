@@ -17,7 +17,7 @@ import { useState } from "react";
 
 export default function MinimalComponent() {
 
-    var wavesurferRef = null;
+    let wavesurferRef = null;
     const [isPlaying, setIsPlaying] = useState(false);
 
     const setWavesurferRef = (ref) => {
