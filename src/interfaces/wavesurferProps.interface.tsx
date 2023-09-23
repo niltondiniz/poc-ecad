@@ -2,7 +2,7 @@ export interface WavesurferProps {
     //Indica se a waveform vai ser carregada por url ou por array de peaks
     loadByUrl: boolean,
     //Altura da waveform
-    wavesurferHeight?: number,
+    wavesurferHeight: number,
     //Referencia do container que vai renderizar a waveform
     container?: any,
     //Indica se a waveform vai ser renderizada em tela cheia

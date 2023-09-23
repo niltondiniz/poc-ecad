@@ -28,8 +28,8 @@ export const App = () => {
   const [isPlaying, setIsPlaying] = useState(false);
 
   //Variáveis para manipular o componente WaveSurferPlayer
-  var wavesurferRef = null;
-  var registerEvent = null;
+  let wavesurferRef = null;
+  let registerEvent = null;
 
   function getTwoRandomNumbers() {
     //dois algarismos aleatórios
@@ -122,6 +122,7 @@ export const App = () => {
         onTimeUpdate={setCurrentTime}
         showInnerCurrentTime={false}
         onPlay={setIsPlaying}
+        wavesurferBarWidth={2}
       />
 
       <div style={{ display: 'flex', flexDirection: 'row', width: '100%', justifyContent: 'center', alignItems: 'center' }}>
@@ -211,7 +212,7 @@ export const App = () => {
         <div style={{ margin: 16 }}>
           <Button variant="contained" onClick={() => {
             setZoom(Math.random());
-          }}>Atualizando estado</Button>
+          }}>Atualizando estado {zoom}</Button>
         </div>
       </div>
 

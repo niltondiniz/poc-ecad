@@ -4,8 +4,7 @@ import { WavesurferProps } from "../interfaces/wavesurferProps.interface";
 import { log } from "../utils/log";
 
 export const WaveSurferPlayer = (props: WavesurferProps) => {
-    const containerRef = useRef<HTMLDivElement>();
-    const [isPlaying, setIsPlaying] = useState(false);
+    const containerRef = useRef<HTMLDivElement>();    
     const [isTooltipVisible, setTooltipVisible] = useState(false);
     const [tooltipPosition, setTooltipPosition] = useState({ x: 0, y: 0 });
     const [tooltipContent, setTooltipContent] = useState('');
@@ -34,7 +33,7 @@ export const WaveSurferPlayer = (props: WavesurferProps) => {
                             if (canvasTags.length > 0) {
                                 peaker = peaker + 1
                                 setPeakCounter(peaker);
-                                clearTimeout(timerRef.current!);
+                                clearTimeout(timerRef.current);
                                 timerRef.current = setTimeout(() => {
                                     setIsLoading(false);
                                 }, 500);
@@ -85,16 +84,14 @@ export const WaveSurferPlayer = (props: WavesurferProps) => {
         if (!wavesurfer.wavesurfer) return;
 
         props.getWavesurferPlayerRef(wavesurfer);
-        props.registerOnMouseOverToRegion && props.registerOnMouseOverToRegion(registerOverEvent);
-        setIsPlaying(false);
+        props.registerOnMouseOverToRegion && props.registerOnMouseOverToRegion(registerOverEvent);        
 
-        wavesurfer.wavesurfer.on('zoom', (zoom) => {
-            //setPeakCounter(0);
+        wavesurfer.wavesurfer.on('zoom', (zoom) => {            
             log('Disparou o zoom');
             observeCanvasCreation();
         });
 
-        const subscriptions = eventSubscriptions(wavesurfer, setIsPlaying, props, setPeakCounter, observeCanvasCreation, setCurrentTime);
+        const subscriptions = eventSubscriptions(wavesurfer, props, setPeakCounter, observeCanvasCreation, setCurrentTime);
 
         return () => {
             subscriptions.forEach((unsub) => unsub());
@@ -150,16 +147,14 @@ export const WaveSurferPlayer = (props: WavesurferProps) => {
     )
 }
 
-function eventSubscriptions(wavesurfer: { wavesurfer: any; wsRegions: any; minimap: any; minimapRegions: any; timeline: any; changeZoom: (zoom: any) => void; getTooltipContent: (region: any, regionsArray: any) => any; }, setIsPlaying, props: any, setPeakCounter, observeCanvasCreation: () => () => void, setCurrentTime: any) {
+function eventSubscriptions(wavesurfer: { wavesurfer: any; wsRegions: any; minimap: any; minimapRegions: any; timeline: any; changeZoom: (zoom: any) => void; getTooltipContent: (region: any, regionsArray: any) => any; }, props: any, setPeakCounter, observeCanvasCreation: () => () => void, setCurrentTime: any) {
     return [
         wavesurfer.wavesurfer.on('play', () => {
-            log('on play');
-            setIsPlaying(true);
+            log('on play');            
             props.onPlay && props.onPlay(true);
         }),
         wavesurfer.wavesurfer.on('pause', () => {
-            log('on pause');
-            setIsPlaying(false);
+            log('on pause');            
             props.onPlay && props.onPlay(false);
             props.onPause && props.onPause();
         }),
@@ -176,14 +171,13 @@ function eventSubscriptions(wavesurfer: { wavesurfer: any; wsRegions: any; minim
             log('on ready');
             props.onReady && props.onReady(duration);
         }),
-        wavesurfer.wavesurfer.on('zoom', (zoom) => {
-            //setPeakCounter(0);
+        wavesurfer.wavesurfer.on('zoom', (zoom) => {            
             log('Disparou o zoom');
             observeCanvasCreation();
         }),
         wavesurfer.wavesurfer.on('finish', () => {
-            log('on finish');
-            setIsPlaying(false);
+            log('on finish');        
+            props.onPlay && props.onPlay(false);
             props.onFinish && props.onFinish();
         }),
         wavesurfer.wsRegions.on('region-created', function (region) {

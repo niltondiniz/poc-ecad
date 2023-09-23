@@ -18,6 +18,15 @@ export const useWavesurfer = (containerRef, options: WavesurferProps) => {
         setZoom(zoom);
     }
 
+    const getValueFromProps = (propName, defaultValue) => {
+
+        if (options[propName] !== undefined) {
+            return options[propName];
+        }
+
+        return defaultValue;
+    }
+
     const getTooltipContent = (region, regionsArray) => {
         const contentRegion = regionsArray.find(r => r.id === region.id);
         if (contentRegion) {
@@ -74,14 +83,11 @@ export const useWavesurfer = (containerRef, options: WavesurferProps) => {
     }, [zoom]);
 
     useEffect(() => {
-        if (!options.loadByUrl) {
-            if (options.peaks.length === 1) {
-                return;
-            }
+        if (!options.loadByUrl && options.peaks.length === 1) {
+            return;
         }
 
-        if (!options) return
-        if (!containerRef.current) return
+        if (!options || !containerRef.current) return        
 
         const regions = RegionsPlugin.create()
         setWsRegions(regions);
@@ -92,16 +98,16 @@ export const useWavesurfer = (containerRef, options: WavesurferProps) => {
         const ws = WaveSurfer.create({
             height: options.wavesurferHeight,
             container: containerRef.current,
-            fillParent: options.wavesurferFillParent !== undefined ? options.wavesurferFillParent : false,
-            hideScrollbar: options.wavesurferHideScrollbar !== undefined ? options.wavesurferHideScrollbar : false,
-            waveColor: options.wavesurferWaveColor !== undefined ? options.wavesurferWaveColor : '#ff4e00',
-            progressColor: options.wavesurferProgressColor !== undefined ? options.wavesurferProgressColor : 'rgb(100, 0, 100, 0.1)',
-            cursorColor: options.wavesurferCursorColor !== undefined ? options.wavesurferCursorColor : '#ddd5e9',
-            cursorWidth: options.wavesurferCursorWidth !== undefined ? options.wavesurferCursorWidth : 2,
-            autoScroll: options.wavesurferAutoScroll !== undefined ? options.wavesurferAutoScroll : true,
-            autoCenter: options.wavesurferAutoCenter !== undefined ? options.wavesurferAutoCenter : true,
-            mediaControls: options.wavesurferMediaControls !== undefined ? options.wavesurferMediaControls : true,
-            barWidth: options.wavesurferBarWidth !== undefined ? options.wavesurferBarWidth : 2,
+            fillParent: getValueFromProps('wavesurferFillParent', false),
+            hideScrollbar: getValueFromProps('wavesurferHideScrollbar', false),
+            waveColor: getValueFromProps('wavesurferWaveColor', '#ff4e00)'),
+            progressColor: getValueFromProps('wavesurferProgressColor', 'rgb(100, 0, 100, 0.1)'),
+            cursorColor: getValueFromProps('wavesurferCursorColor', '#ddd5e9'),
+            cursorWidth: getValueFromProps('wavesurferCursorWidth', 2),
+            autoScroll: getValueFromProps('wavesurferAutoScroll', true),
+            autoCenter: getValueFromProps('wavesurferAutoCenter', true),
+            mediaControls: getValueFromProps('wavesurferMediaControls', false),
+            barWidth: getValueFromProps('wavesurferBarWidth', 2),
             plugins: [
                 regions,
             ],
@@ -109,10 +115,10 @@ export const useWavesurfer = (containerRef, options: WavesurferProps) => {
         });
 
         const minimapInstance = ws.registerPlugin(MinimapPlugin.create({
-            height: options.minimapHeight !== undefined ? options.minimapHeight : 40,
-            waveColor: options.minimapWaveColor !== undefined ? options.minimapWaveColor : '#ddd',
+            height: getValueFromProps('minimapHeight', 40),
+            waveColor: getValueFromProps('minimapWaveColor', '#ddd'),
             progressColor
-                : options.minimapProgressColor !== undefined ? options.minimapProgressColor : '#999',
+                : getValueFromProps('minimapProgressColor', '#999'),
             plugins: [
                 minimapRegions,
             ]
@@ -121,29 +127,18 @@ export const useWavesurfer = (containerRef, options: WavesurferProps) => {
 
 
         const timelineInstance = ws.registerPlugin(TimelinePlugin.create({
-            height: options.timelineHeight !== undefined ? options.timelineHeight : 20,
-            primaryLabelInterval: options.timelinePrimaryLabelInterval !== undefined ? options.timelinePrimaryLabelInterval : 10,
+            height: getValueFromProps('timelineHeight', 20),
+            primaryLabelInterval: getValueFromProps('timelinePrimaryLabelInterval', 10),
             style: {
-                fontSize: options.timelineFontSize !== undefined ? options.timelineFontSize : '10px',
-                color: options.timelineFontColor !== undefined ? options.timelineFontColor : '#6A3274',
+                fontSize: getValueFromProps('timelineFontSize', '10px'),
+                color: getValueFromProps('timelineFontColor', '#6A3274'),
             },
         }));
         setTimeline(timelineInstance);
-        
-        ws.load(options.url, !options.loadByUrl && options.peaks);
-        setWavesurfer(ws);
 
-        regions.on('remove', function (region) {
-            //Ao criar uma região, adiciono ela no minimap
-            minimapRegions.addRegion({
-                id: region.id,
-                start: region.start,
-                end: region.end,
-                color: region.color,
-                drag: region.drag,
-                resize: region.resize,
-            });            
-        });        
+        const shouldLoadPeaks = !options.loadByUrl && options.peaks;
+        ws.load(options.url, shouldLoadPeaks);        
+        setWavesurfer(ws);        
 
         return () => {
             ws.destroy()
