@@ -2,18 +2,9 @@ import { useState, useCallback, useEffect } from 'react';
 import "rsuite/dist/rsuite.min.css";
 import { WaveSurferPlayer } from './components/wavesurferplayer.component';
 import { Slider } from 'rsuite';
-import PlayArrowIcon from '@mui/icons-material/PlayArrow';
-import PauseIcon from '@mui/icons-material/Pause';
-import FastForwardIcon from '@mui/icons-material/FastForward';
-import FastRewindIcon from '@mui/icons-material/FastRewind';
-import Forward10Icon from '@mui/icons-material/Forward10';
-import Replay10Icon from '@mui/icons-material/Replay10';
-import FirstPageIcon from '@mui/icons-material/FirstPage';
-import LastPageIcon from '@mui/icons-material/LastPage';
-import AddIcon from '@mui/icons-material/Add';
-import RemoveIcon from '@mui/icons-material/Remove';
 import Button from '@mui/material/Button';
 import Typography from '@mui/material/Typography';
+import MediaControlsComponent from './components/mediacontrols.component';
 
 export const App = () => {
 
@@ -26,9 +17,9 @@ export const App = () => {
   const [regions, setRegions] = useState([]);
   const [currentTime, setCurrentTime] = useState(0);
   const [isPlaying, setIsPlaying] = useState(false);
+  const [wavesurfer, setWavesurfer] = useState(null);
 
   //Variáveis para manipular o componente WaveSurferPlayer
-  let wavesurferRef = null;
   let registerEvent = null;
 
   function getTwoRandomNumbers() {
@@ -40,7 +31,8 @@ export const App = () => {
 
   //Esta função é responsável por obter a referência do componente WaveSurferPlayer
   function getWavesurferPlayerRef(ref) {
-    wavesurferRef = ref;
+    console.log('Registrado');
+    setWavesurfer(ref);
   }
 
   //esta função é responsável por setar a referencia da função que registra o evento de mouseover, para exibir o tooltip
@@ -162,10 +154,10 @@ export const App = () => {
 
             setRegions([...regions, newContentRegion]);
 
-            const newRegion = wavesurferRef.wsRegions.addRegion({
+            const newRegion = wavesurfer.wsRegions.addRegion({
               id: idNewRegion,
-              start: wavesurferRef.wavesurfer.getCurrentTime(),
-              end: wavesurferRef.wavesurfer.getCurrentTime() + 10,
+              start: wavesurfer.wavesurfer.getCurrentTime(),
+              end: wavesurfer.wavesurfer.getCurrentTime() + 10,
               color: `#${getTwoRandomNumbers()}${getTwoRandomNumbers()}${getTwoRandomNumbers()}B0`,
               drag: false,
               resize: false,
@@ -176,13 +168,28 @@ export const App = () => {
             //Está na documentação do wavesurfer.
             registerEvent(newRegion, [...regions, newContentRegion]);
 
-            const newMinimapRegion = wavesurferRef.minimapRegions.addRegion({
+            wavesurfer.wsRegions.addRegion({
+              start: newRegion.start,
+              color: '#000000',
+              drag: false,
+              resize: false
+            });
+
+            const newMinimapRegion = wavesurfer.minimapRegions.addRegion({
               id: newRegion.id,
               start: newRegion.start,
               end: newRegion.end,
               color: newRegion.color,
               drag: newRegion.drag,
               resize: newRegion.resize,
+            });
+
+            wavesurfer.minimapRegions.addRegion({
+              id: newMinimapRegion.id,
+              start: newMinimapRegion.start,
+              color: '#000000',
+              drag: newMinimapRegion.drag,
+              resize: newMinimapRegion.resize,
             });
 
             //Registrando o evento do tooltip. Agora para o minimap
@@ -193,19 +200,27 @@ export const App = () => {
 
         <div style={{ margin: 16 }}>
           <Button variant="contained" onClick={() => {
-            wavesurferRef.wsRegions.addRegion({
-              start: wavesurferRef.wavesurfer.getCurrentTime(),
+            const markerRegion = wavesurfer.wsRegions.addRegion({
+              start: wavesurfer.getCurrentTime(),
               color: '#000000',
               drag: false,
               resize: false
+            });
+
+            wavesurfer.minimapRegions.addRegion({
+              id: markerRegion.id,
+              start: markerRegion.start,
+              color: '#000000',
+              drag: markerRegion.drag,
+              resize: markerRegion.resize,
             });
           }}>Add Marker</Button>
         </div>
 
         <div style={{ margin: 16 }}>
           <Button variant="contained" onClick={() => {
-            wavesurferRef.wsRegions.clearRegions();
-            wavesurferRef.minimapRegions.clearRegions();
+            wavesurfer.wsRegions.clearRegions();
+            wavesurfer.minimapRegions.clearRegions();
           }}>Remove all regions</Button>
         </div>
 
@@ -228,55 +243,13 @@ export const App = () => {
               return mark;
             }}
             onChange={(value) => {
-              wavesurferRef.changeZoom(value);
+              wavesurfer.changeZoom(value);
             }}
           />
         </div>
       </div>
-
-      <div style={{ display: 'flex', flexDirection: 'row', width: '100%', justifyContent: 'center', alignItems: 'center' }}>
-
-        <div style={{ margin: 16 }}>
-          <FirstPageIcon style={{ cursor: 'pointer' }} onClick={() => { wavesurferRef.wavesurfer.seekTo(0); }} />
-        </div>
-
-        <div style={{ margin: 16 }}>
-          <FastRewindIcon style={{ cursor: 'pointer' }} onClick={() => { wavesurferRef.toPreviousRegion(); }} />
-        </div>
-
-        <div style={{ margin: 16 }}>
-          {
-            !isPlaying ?
-              <PlayArrowIcon style={{ cursor: 'pointer' }} onClick={() => wavesurferRef.wsRegions.wavesurfer.play()} /> :
-              <PauseIcon style={{ cursor: 'pointer' }} onClick={() => wavesurferRef.wsRegions.wavesurfer.pause()} />
-          }
-        </div>
-
-        <div style={{ margin: 16 }}>
-          <FastForwardIcon style={{ cursor: 'pointer' }} onClick={() => { wavesurferRef.toNextRegion(); }} />
-        </div>
-
-        <div style={{ margin: 16 }}>
-          <LastPageIcon style={{ cursor: 'pointer' }} onClick={() => { wavesurferRef.wavesurfer.seekTo(1); }} />
-        </div>
-
-        <div style={{ margin: 16 }}>
-          <Replay10Icon style={{ cursor: 'pointer' }} onClick={() => { wavesurferRef.wavesurfer.setTime(wavesurferRef.wavesurfer.getCurrentTime() - 10) }} />
-        </div>
-
-        <div style={{ margin: 16 }}>
-          <Forward10Icon style={{ cursor: 'pointer' }} onClick={() => { wavesurferRef.wavesurfer.setTime(wavesurferRef.wavesurfer.getCurrentTime() + 10) }} />
-        </div>
-
-        <div style={{ margin: 16 }}>
-          <AddIcon style={{ cursor: 'pointer' }} onClick={() => { wavesurferRef.wavesurfer.setPlaybackRate(wavesurferRef.wavesurfer.getPlaybackRate() + 0.1); }} />
-        </div>
-
-        <div style={{ margin: 16 }}>
-          <RemoveIcon style={{ cursor: 'pointer' }} onClick={() => { wavesurferRef.wavesurfer.setPlaybackRate(wavesurferRef.wavesurfer.getPlaybackRate() - 0.1); }} />
-        </div>
-
-      </div>
+      <MediaControlsComponent wavesurfer={wavesurfer} isPlaying={isPlaying} />
     </div >
   );
 };
+

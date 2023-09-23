@@ -83,7 +83,6 @@ export const WaveSurferPlayer = (props: WavesurferProps) => {
     useEffect(() => {
         if (!wavesurfer.wavesurfer) return;
 
-        props.getWavesurferPlayerRef(wavesurfer);
         props.registerOnMouseOverToRegion && props.registerOnMouseOverToRegion(registerOverEvent);        
 
         wavesurfer.wavesurfer.on('zoom', (zoom) => {            
@@ -169,6 +168,7 @@ function eventSubscriptions(wavesurfer: { wavesurfer: any; wsRegions: any; minim
         }),
         wavesurfer.wavesurfer.on('ready', (duration) => {
             log('on ready');
+            props.getWavesurferPlayerRef(wavesurfer);
             props.onReady && props.onReady(duration);
         }),
         wavesurfer.wavesurfer.on('zoom', (zoom) => {            
