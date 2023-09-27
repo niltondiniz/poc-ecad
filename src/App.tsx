@@ -5,11 +5,17 @@ import { Slider } from 'rsuite';
 import Button from '@mui/material/Button';
 import Typography from '@mui/material/Typography';
 import MediaControlsComponent from './components/mediacontrols.component';
+import CustomizedTables from './components/data-table.component';
+import { RegionInfo } from './interfaces/region-info.interface';
+import { formatTime } from './utils/helpers';
+import { listaDeMusicasRockAnos80 } from './utils/consts';
+
+
 
 export const App = () => {
 
-  const urls = ['audio.mp3', 'audio_.mp3'];
-  const peakNames = ['audio1', 'audio2'];
+  const urls = ['audio_.mp3'];
+  const peakNames = ['audio2'];
   const [audioUrl, setAudioUrl] = useState(urls[0]);
   const [peakUrl, setPeakUrl] = useState(`${peakNames[0]}.json`);
   const [peaks, setPeaks] = useState([0]);
@@ -18,9 +24,11 @@ export const App = () => {
   const [currentTime, setCurrentTime] = useState(0);
   const [isPlaying, setIsPlaying] = useState(false);
   const [wavesurfer, setWavesurfer] = useState(null);
+  const [regionInfo, setRegionInfo] = useState<RegionInfo[]>([]);
 
   //Variáveis para manipular o componente WaveSurferPlayer
-  let registerEvent = null;
+  let registerOnMouseOverEvent = null;
+  let registerUpdateEndEvent = null;
 
   function getTwoRandomNumbers() {
     //dois algarismos aleatórios
@@ -36,17 +44,23 @@ export const App = () => {
   }
 
   //esta função é responsável por setar a referencia da função que registra o evento de mouseover, para exibir o tooltip
-  function setRegisterEvent(event) {
-    registerEvent = event;
+  function setRegisterOnMouseOverEvent(event) {
+    registerOnMouseOverEvent = event;
   }
 
-  //Função responsável por formatar o tempo para exibição
-  const formatTime = (time: number): string => {
-    const hours = Math.floor(time / 3600);
-    const minutes = Math.floor((time % 3600) / 60);
-    const seconds = Math.floor(time % 60);
-    return `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
-  };
+  //esta função é responsável por setar a referencia da função que registra o evento de updateEnd, para redimensionar/mover a região
+  function setRegisterOnUpdateEndEvent(event) {
+    registerUpdateEndEvent = event;
+  }
+
+  function playRegion(startTime: number) {
+    //wavesurfer.wavesurfer.setTime(startTime);
+    wavesurfer.wavesurfer.play();
+  }
+
+  function setTimeToRegion(startTime: number) {
+    wavesurfer.wavesurfer.setTime(startTime);
+  }
 
   useEffect(() => {
     //Carregando os peaks para exibir o waveform    
@@ -64,6 +78,36 @@ export const App = () => {
     setAudioUrl(urls[0]);
     setPeakUrl(`${peakNames[0]}.json`);
   }, [urls, peakNames]);
+
+  const registerUpdateRegionEvent = useCallback((region, regionsArray) => {
+    region.on('update', () => {
+      // Encontrar a região no state regionInfo que está sendo atualizada pelo id
+      const regionToUpdate = regionsArray.find(regionData => regionData.id === region.id);
+
+      // Atualizar o inicio e fim da região
+      if (regionToUpdate) {
+        const updatedRegion = {
+          ...regionToUpdate, // Copie todas as propriedades existentes
+          start: region.start,
+          end: region.end,
+          duration: region.end - region.start,
+        };
+
+        // Crie uma nova cópia do array com a região atualizada
+        const updatedRegionsArray = regionsArray.map(regionData => {
+          if (regionData.id === region.id) {
+            return updatedRegion;
+          }
+          return regionData;
+        });
+
+        // Atualize o state regionInfo com a nova cópia do array
+        setRegionInfo(updatedRegionsArray);
+
+      }
+    });
+
+  }, []);
 
   //Este componente será exibido enquanto estiver carregando o zoom do waveform
   const loadingComponent = (
@@ -101,7 +145,8 @@ export const App = () => {
       <WaveSurferPlayer
         loadByUrl={false}
         getWavesurferPlayerRef={getWavesurferPlayerRef}
-        registerOnMouseOverToRegion={setRegisterEvent}
+        registerOnMouseOverToRegion={setRegisterOnMouseOverEvent}
+        registerOnUpdateEnd={setRegisterOnUpdateEndEvent}
         wavesurferHeight={200}
         wavesurferFillParent={true}
         wavesurferWaveColor="#1976d2"
@@ -115,6 +160,7 @@ export const App = () => {
         showInnerCurrentTime={false}
         onPlay={setIsPlaying}
         wavesurferBarWidth={2}
+        timelinePrimaryLabelInterval={3600}        
       />
 
       <div style={{ display: 'flex', flexDirection: 'row', width: '100%', justifyContent: 'center', alignItems: 'center' }}>
@@ -125,12 +171,24 @@ export const App = () => {
 
       <div style={{ display: 'flex', flexDirection: 'row', width: '100%', justifyContent: 'center', alignItems: 'center' }}>
 
-        <Button variant="contained" style={{ margin: 16 }} onClick={onUrlChange}>Carregar áudio</Button>
+        {/* <Button variant="contained" style={{ margin: 16 }} onClick={onUrlChange}>Carregar áudio</Button> */}
         <div style={{ margin: 16 }}>
 
           <Button variant="contained" onClick={() => {
 
-            const idNewRegion = Math.random();
+            const idNewRegion = Math.floor(Math.random() * 10);
+            const randomNumber = Math.floor(Math.random() * 10);
+
+            const regionData = {
+              id: idNewRegion,
+              start: wavesurfer.wavesurfer.getCurrentTime(),
+              end: wavesurfer.wavesurfer.getCurrentTime() + 10000,
+              duration: 10000,
+              title: listaDeMusicasRockAnos80[randomNumber].title,
+              author: listaDeMusicasRockAnos80[randomNumber].author
+            }
+
+            setRegionInfo([...regionInfo, regionData]);
 
             /*Este componente jsx será exibido no tooltip
               O componente pode ser qualquer coisa, inclusive outro componente React
@@ -139,13 +197,12 @@ export const App = () => {
             */
             const tooltipContent = (
               <div>
-                <h4>Título</h4>
-                <p>Este é um parágrafo de exemplo.</p>
+                <h4>{regionData.title}</h4>
+                <p>{regionData.author}</p>
                 <ul>
-                  <li>{idNewRegion}</li>
-                  <li>Autor: Nilton Diniz</li>
-                  <li>Musica: Teste de musica</li>
-                  <li>Ano: {Math.random()}</li>
+                  <li>Inicio: {formatTime(regionData.start)}</li>
+                  <li>Fim: {formatTime(regionData.end)}</li>
+                  <li>Duração: {formatTime(regionData.duration)}</li>
                 </ul>
               </div>
             )
@@ -157,26 +214,34 @@ export const App = () => {
             const newRegion = wavesurfer.wsRegions.addRegion({
               id: idNewRegion,
               start: wavesurfer.wavesurfer.getCurrentTime(),
-              end: wavesurfer.wavesurfer.getCurrentTime() + 100,
+              end: wavesurfer.wavesurfer.getCurrentTime() + 10000,
               color: `#${getTwoRandomNumbers()}${getTwoRandomNumbers()}${getTwoRandomNumbers()}B0`,
-              drag: false,
-              resize: false,
+              drag: true,
+              resize: true,
             });
+
+            console.log('Region info', [...regionInfo, regionData]);
+            registerUpdateRegionEvent(newRegion, [...regionInfo, regionData]);
+
+            var elementoPai = newRegion.element;
+            var elementoFilhoEsquerdo = elementoPai.querySelector('[data-resize="left"]');
+            elementoFilhoEsquerdo.style.backgroundColor = newRegion.color.slice(0, -2);
+            elementoFilhoEsquerdo.style.width = '5px';
+            elementoFilhoEsquerdo.style.borderLeft = '0px solid red';
+
+            var elementoFilhoDireito = elementoPai.querySelector('[data-resize="right"]');
+            elementoFilhoDireito.style.backgroundColor = newRegion.color.slice(0, -2);
+            elementoFilhoDireito.style.width = '5px';
+            elementoFilhoDireito.style.borderRight = '0px solid red';
 
             //Registrando o evento do tooltip.
             //Isto é feito para cada region adicionada.
             //Está na documentação do wavesurfer.
-            registerEvent(newRegion, [...regions, newContentRegion]);
-
-            wavesurfer.wsRegions.addRegion({
-              start: newRegion.start,
-              color: '#000000',
-              drag: false,
-              resize: false
-            });
+            registerOnMouseOverEvent(newRegion, [...regions, newContentRegion]);
+            registerUpdateEndEvent(newRegion, wavesurfer.wsRegions.getRegions());
 
             const newMinimapRegion = wavesurfer.minimapRegions.addRegion({
-              id: newRegion.id,
+              id: `minimap-${newRegion.id}`,
               start: newRegion.start,
               end: newRegion.end,
               color: newRegion.color,
@@ -184,24 +249,27 @@ export const App = () => {
               resize: newRegion.resize,
             });
 
-            wavesurfer.minimapRegions.addRegion({
-              id: newMinimapRegion.id,
-              start: newMinimapRegion.start,
-              color: '#000000',
-              drag: newMinimapRegion.drag,
-              resize: newMinimapRegion.resize,
-            });
+            var elementoPaiMiniMap = newMinimapRegion.element;
+            var elementoFilhoEsquerdoMiniMap = elementoPaiMiniMap.querySelector('[data-resize="left"]');
+            elementoFilhoEsquerdoMiniMap.style.backgroundColor = newRegion.color.slice(0, -2);
+            elementoFilhoEsquerdoMiniMap.style.width = '5px';
+            elementoFilhoEsquerdoMiniMap.style.borderLeft = '0px solid red';
+
+            var elementoFilhoDireitoMiniMap = elementoPaiMiniMap.querySelector('[data-resize="right"]');
+            elementoFilhoDireitoMiniMap.style.backgroundColor = newRegion.color.slice(0, -2);
+            elementoFilhoDireitoMiniMap.style.width = '5px';
+            elementoFilhoDireitoMiniMap.style.borderRight = '0px solid red';
 
             //Registrando o evento do tooltip. Agora para o minimap
-            registerEvent(newMinimapRegion, [...regions, newContentRegion]);
+            registerOnMouseOverEvent(newMinimapRegion, [...regions, newContentRegion]);
 
           }}>Add Region</Button>
         </div>
 
-        <div style={{ margin: 16 }}>
+        {/* <div style={{ margin: 16 }}>
           <Button variant="contained" onClick={() => {
             const markerRegion = wavesurfer.wsRegions.addRegion({
-              start: wavesurfer.getCurrentTime(),
+              start: wavesurfer.wavesurfer.getCurrentTime(),
               color: '#000000',
               drag: false,
               resize: false
@@ -215,20 +283,21 @@ export const App = () => {
               resize: markerRegion.resize,
             });
           }}>Add Marker</Button>
-        </div>
+        </div> */}
 
         <div style={{ margin: 16 }}>
           <Button variant="contained" onClick={() => {
             wavesurfer.wsRegions.clearRegions();
             wavesurfer.minimapRegions.clearRegions();
+            setRegionInfo([]);
           }}>Remove all regions</Button>
         </div>
 
-        <div style={{ margin: 16 }}>
+        {/* <div style={{ margin: 16 }}>
           <Button variant="contained" onClick={() => {
             setZoom(Math.random());
           }}>Atualizando estado {zoom}</Button>
-        </div>
+        </div> */}
       </div>
 
       <div style={{ display: 'flex', flexDirection: 'row', width: '100%', justifyContent: 'center', alignItems: 'center' }}>
@@ -236,7 +305,7 @@ export const App = () => {
           <Slider
             defaultValue={0}
             min={0}
-            max={100}
+            max={20}
             progress
             style={{ marginTop: 16 }}
             renderMark={mark => {
@@ -249,6 +318,9 @@ export const App = () => {
         </div>
       </div>
       <MediaControlsComponent wavesurfer={wavesurfer} isPlaying={isPlaying} />
+      <div style={{ marginTop: 16 }}>
+        <CustomizedTables regions={regionInfo} playRegion={playRegion} setTimeToRegion={setTimeToRegion} />
+      </div>
     </div >
   );
 };

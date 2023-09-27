@@ -29,6 +29,8 @@ export interface WavesurferProps {
     getWavesurferPlayerRef?: any,
     //Callback para registrar o evento de tooltip
     registerOnMouseOverToRegion?: any,
+    //Callback para registrar o evento de update end
+    registerOnUpdateEnd?: any,
     //Url do audio
     url?: string,
     //Array de peaks

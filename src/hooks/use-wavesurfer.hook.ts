@@ -89,7 +89,7 @@ export const useWavesurfer = (containerRef, options: WavesurferProps) => {
 
         if (!options || !containerRef.current) return        
 
-        const regions = RegionsPlugin.create()
+        const regions = RegionsPlugin.create();
         setWsRegions(regions);
 
         const minimapRegions = RegionsPlugin.create()
@@ -108,10 +108,10 @@ export const useWavesurfer = (containerRef, options: WavesurferProps) => {
             autoCenter: getValueFromProps('wavesurferAutoCenter', true),
             mediaControls: getValueFromProps('wavesurferMediaControls', false),
             barWidth: getValueFromProps('wavesurferBarWidth', 2),
+            
             plugins: [
                 regions,
             ],
-
         });
 
         const minimapInstance = ws.registerPlugin(MinimapPlugin.create({
@@ -127,7 +127,8 @@ export const useWavesurfer = (containerRef, options: WavesurferProps) => {
 
 
         const timelineInstance = ws.registerPlugin(TimelinePlugin.create({
-            height: getValueFromProps('timelineHeight', 20),
+            height: getValueFromProps('timelineHeight', 30),
+            secondaryLabelInterval: 600,            
             primaryLabelInterval: getValueFromProps('timelinePrimaryLabelInterval', 10),
             style: {
                 fontSize: getValueFromProps('timelineFontSize', '10px'),

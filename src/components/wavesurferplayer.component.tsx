@@ -4,7 +4,7 @@ import { WavesurferProps } from "../interfaces/wavesurferProps.interface";
 import { log } from "../utils/log";
 
 export const WaveSurferPlayer = (props: WavesurferProps) => {
-    const containerRef = useRef<HTMLDivElement>();    
+    const containerRef = useRef<HTMLDivElement>();
     const [isTooltipVisible, setTooltipVisible] = useState(false);
     const [tooltipPosition, setTooltipPosition] = useState({ x: 0, y: 0 });
     const [tooltipContent, setTooltipContent] = useState('');
@@ -59,14 +59,49 @@ export const WaveSurferPlayer = (props: WavesurferProps) => {
         region.on('over', () => {
             const content = wavesurfer.getTooltipContent(region, regionsArray);
             const posicao = tooltipPosition;
-            if (content.showTooltip) {
-                showToolTip(posicao.x, posicao.y + 200, true, content.content);
+            if (content) {
+                if (content.showTooltip) {
+                    showToolTip(posicao.x, posicao.y + 200, true, content.content);
+                }
             }
         });
         region.on('leave', () => {
             showToolTip(100, 100, false);
         });
     }, [tooltipPosition, wavesurfer]);
+
+    const registerUpdateEndEvent = useCallback((region, regionsArray) => {
+
+        region.on('update-end', () => {
+            //filtro todas as regioes o end da nova regiao é menor que o start de alguma regiao existente 
+            //e o start da nova regiao é maior que o end de alguma regiao existente
+            const regions = regionsArray.filter((r) => {
+                return (region.end > r.start && region.start < r.end && r.id !== region.id);
+            });
+
+            console.log('regions', regions);
+
+            //Se houver algum retorno no filtro, eu preciso redimensionar a nova região, 
+            //o inicio dela precisará ser o fim da região anterior.
+            if (regions.length > 0) {
+
+                const lastRegion = regions[regions.length - 1];
+                console.log('Start da nova região', formatTime(region.start));
+                console.log('End da região anterior', formatTime(lastRegion.end));
+                const newStart = lastRegion.end - region.start;
+                console.log('Novo start', formatTime(region.start + newStart));
+                region.setOptions({ start: lastRegion.end });
+            }
+
+            const minimapRegion = wavesurfer.minimapRegions.getRegions().filter((regionMinimap) => regionMinimap.id === `minimap-${region.id}`);
+            console.log('minimapRegion', wavesurfer.minimapRegions.getRegions());
+            if (minimapRegion[0]) {
+                minimapRegion[0].setOptions({ start: region.start, end: region.end });
+            }
+
+
+        });
+    }, [wavesurfer.wavesurfer]);
 
     const handleMouseMove = useCallback((e) => {
         const mouseX = e.clientX;
@@ -83,9 +118,10 @@ export const WaveSurferPlayer = (props: WavesurferProps) => {
     useEffect(() => {
         if (!wavesurfer.wavesurfer) return;
 
-        props.registerOnMouseOverToRegion && props.registerOnMouseOverToRegion(registerOverEvent);        
+        props.registerOnMouseOverToRegion && props.registerOnMouseOverToRegion(registerOverEvent);
+        props.registerOnUpdateEnd && props.registerOnUpdateEnd(registerUpdateEndEvent);
 
-        wavesurfer.wavesurfer.on('zoom', (zoom) => {            
+        wavesurfer.wavesurfer.on('zoom', (zoom) => {
             log('Disparou o zoom');
             observeCanvasCreation();
         });
@@ -115,8 +151,7 @@ export const WaveSurferPlayer = (props: WavesurferProps) => {
                     id="tooltip"
                     className="tooltip"
                     style={{
-                        position:
-                            'absolute',
+                        position: 'absolute',
                         left: tooltipPosition.x + 16,
                         top: tooltipPosition.y,
                         maxWidth: 250,
@@ -137,7 +172,7 @@ export const WaveSurferPlayer = (props: WavesurferProps) => {
 
                 </div>
             )}
-            <span style={{marginLeft:16}}>{
+            <span style={{ marginLeft: 16 }}>{
                 props.showInnerCurrentTime ?
                     formatTime(currentTime) : <div></div>
 
@@ -147,13 +182,14 @@ export const WaveSurferPlayer = (props: WavesurferProps) => {
 }
 
 function eventSubscriptions(wavesurfer: { wavesurfer: any; wsRegions: any; minimap: any; minimapRegions: any; timeline: any; changeZoom: (zoom: any) => void; getTooltipContent: (region: any, regionsArray: any) => any; }, props: any, setPeakCounter, observeCanvasCreation: () => () => void, setCurrentTime: any) {
+
     return [
         wavesurfer.wavesurfer.on('play', () => {
-            log('on play');            
+            log('on play');
             props.onPlay && props.onPlay(true);
         }),
         wavesurfer.wavesurfer.on('pause', () => {
-            log('on pause');            
+            log('on pause');
             props.onPlay && props.onPlay(false);
             props.onPause && props.onPause();
         }),
@@ -168,15 +204,18 @@ function eventSubscriptions(wavesurfer: { wavesurfer: any; wsRegions: any; minim
         }),
         wavesurfer.wavesurfer.on('ready', (duration) => {
             log('on ready');
+            wavesurfer.wsRegions.enableDragSelection({
+                color: 'rgb(173,216,230,0.5)',
+            });
             props.getWavesurferPlayerRef(wavesurfer);
             props.onReady && props.onReady(duration);
         }),
-        wavesurfer.wavesurfer.on('zoom', (zoom) => {            
+        wavesurfer.wavesurfer.on('zoom', (zoom) => {
             log('Disparou o zoom');
             observeCanvasCreation();
         }),
         wavesurfer.wavesurfer.on('finish', () => {
-            log('on finish');        
+            log('on finish');
             props.onPlay && props.onPlay(false);
             props.onFinish && props.onFinish();
         }),
