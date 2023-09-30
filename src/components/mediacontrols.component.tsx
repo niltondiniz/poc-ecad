@@ -20,7 +20,6 @@ export default function MediaControlsComponent(props: MediaControlsComponentProp
     const { isPlaying, wavesurfer } = props;
 
     useEffect(() => {
-        console.log('MediaControlsComponent', isPlaying, wavesurfer);
     },[isPlaying, wavesurfer]);
 
     return (

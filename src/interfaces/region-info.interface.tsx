@@ -5,4 +5,5 @@ export interface RegionInfo{
     duration: number;
     title: string;
     author: string;
+    showTooltip: boolean;
 }

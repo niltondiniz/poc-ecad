@@ -2,13 +2,26 @@ import { useRef, useState, useEffect, useCallback } from "react"
 import { useWavesurfer } from "../hooks/use-wavesurfer.hook"
 import { WavesurferProps } from "../interfaces/wavesurferProps.interface";
 import { log } from "../utils/log";
+import { TooltipComponent } from "./tooltip.component";
+import { TooltipPropsInterface } from "../interfaces/tooltip-props.interface";
+import { formatTime } from "../utils/helpers";
 
 export const WaveSurferPlayer = (props: WavesurferProps) => {
     const containerRef = useRef<HTMLDivElement>();
     const [isTooltipVisible, setTooltipVisible] = useState(false);
     const [tooltipPosition, setTooltipPosition] = useState({ x: 0, y: 0 });
-    const [tooltipContent, setTooltipContent] = useState('');
-    const wavesurfer = useWavesurfer(containerRef, props);
+    const [tooltipProps, setTooltipProps] = useState<TooltipPropsInterface>(null);
+        
+    const wavesurfer = useWavesurfer(
+        containerRef,
+        props,
+        props.regionInfo,
+        props.setRegionInfo,
+        tooltipPosition,        
+        setTooltipVisible,
+        tooltipProps,
+        setTooltipProps
+    );
     const [peakCounter, setPeakCounter] = useState(0);
     const [isLoading, setIsLoading] = useState(false);
     const timerRef = useRef<NodeJS.Timeout | null>(null);
@@ -55,74 +68,16 @@ export const WaveSurferPlayer = (props: WavesurferProps) => {
         }
     }, []);
 
-    const registerOverEvent = useCallback((region, regionsArray) => {
-        region.on('over', () => {
-            const content = wavesurfer.getTooltipContent(region, regionsArray);
-            const posicao = tooltipPosition;
-            if (content) {
-                if (content.showTooltip) {
-                    showToolTip(posicao.x, posicao.y + 200, true, content.content);
-                }
-            }
-        });
-        region.on('leave', () => {
-            showToolTip(100, 100, false);
-        });
-    }, [tooltipPosition, wavesurfer]);
-
-    const registerUpdateEndEvent = useCallback((region, regionsArray) => {
-
-        region.on('update-end', () => {
-            //filtro todas as regioes o end da nova regiao é menor que o start de alguma regiao existente 
-            //e o start da nova regiao é maior que o end de alguma regiao existente
-            const regions = regionsArray.filter((r) => {
-                return (region.end > r.start && region.start < r.end && r.id !== region.id);
-            });
-
-            console.log('regions', regions);
-
-            //Se houver algum retorno no filtro, eu preciso redimensionar a nova região, 
-            //o inicio dela precisará ser o fim da região anterior.
-            if (regions.length > 0) {
-
-                const lastRegion = regions[regions.length - 1];
-                console.log('Start da nova região', formatTime(region.start));
-                console.log('End da região anterior', formatTime(lastRegion.end));
-                const newStart = lastRegion.end - region.start;
-                console.log('Novo start', formatTime(region.start + newStart));
-                region.setOptions({ start: lastRegion.end });
-            }
-
-            const minimapRegion = wavesurfer.minimapRegions.getRegions().filter((regionMinimap) => regionMinimap.id === `minimap-${region.id}`);
-            console.log('minimapRegion', wavesurfer.minimapRegions.getRegions());
-            if (minimapRegion[0]) {
-                minimapRegion[0].setOptions({ start: region.start, end: region.end });
-            }
-
-
-        });
-    }, [wavesurfer.wavesurfer]);
-
     const handleMouseMove = useCallback((e) => {
         const mouseX = e.clientX;
         const mouseY = e.clientY;
         setTooltipPosition({ x: mouseX, y: mouseY });
     }, []);
 
-    const showToolTip = useCallback((x, y, isVisible, content?) => {
-        setTooltipContent(content);
-        setTooltipPosition({ x, y });
-        setTooltipVisible(isVisible);
-    }, []);
-
     useEffect(() => {
         if (!wavesurfer.wavesurfer) return;
 
-        props.registerOnMouseOverToRegion && props.registerOnMouseOverToRegion(registerOverEvent);
-        props.registerOnUpdateEnd && props.registerOnUpdateEnd(registerUpdateEndEvent);
-
-        wavesurfer.wavesurfer.on('zoom', (zoom) => {
-            log('Disparou o zoom');
+        wavesurfer.wavesurfer.on('zoom', (zoom) => {            
             observeCanvasCreation();
         });
 
@@ -131,14 +86,7 @@ export const WaveSurferPlayer = (props: WavesurferProps) => {
         return () => {
             subscriptions.forEach((unsub) => unsub());
         };
-    }, [wavesurfer.wavesurfer, props, registerOverEvent, observeCanvasCreation]);
-
-    const formatTime = useCallback((time: number): string => {
-        const hours = Math.floor(time / 3600);
-        const minutes = Math.floor((time % 3600) / 60);
-        const seconds = Math.floor(time % 60);
-        return `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
-    }, []);
+    }, [wavesurfer, props, observeCanvasCreation]);
 
     return (
         <div style={{ justifyContent: "center", alignItems: "center", width: '100%' }} >
@@ -146,32 +94,7 @@ export const WaveSurferPlayer = (props: WavesurferProps) => {
                 <div className="waveformContainer" ref={containerRef} style={{ minHeight: '220px', zIndex: 1, margin: 16 }} onMouseMove={handleMouseMove} />
                 {isLoading && props.loadingComponent}
             </div>
-            {isTooltipVisible && (
-                <div
-                    id="tooltip"
-                    className="tooltip"
-                    style={{
-                        position: 'absolute',
-                        left: tooltipPosition.x + 16,
-                        top: tooltipPosition.y,
-                        maxWidth: 250,
-                        backgroundColor: '#6a5e5e',
-                        opacity: 0.9,
-                        borderRadius: 9,
-                        zIndex: 1000,
-                        justifyContent: 'center',
-                        alignItems: 'center',
-                        textAlign: 'left',
-                        padding: 16,
-                        color: '#f9f7f7',
-                        fontWeight: '500',
-
-                    }}
-                >
-                    {tooltipContent}
-
-                </div>
-            )}
+            <TooltipComponent tooltipProps={tooltipProps} tooltipPosition={tooltipPosition} />
             <span style={{ marginLeft: 16 }}>{
                 props.showInnerCurrentTime ?
                     formatTime(currentTime) : <div></div>
@@ -181,7 +104,7 @@ export const WaveSurferPlayer = (props: WavesurferProps) => {
     )
 }
 
-function eventSubscriptions(wavesurfer: { wavesurfer: any; wsRegions: any; minimap: any; minimapRegions: any; timeline: any; changeZoom: (zoom: any) => void; getTooltipContent: (region: any, regionsArray: any) => any; }, props: any, setPeakCounter, observeCanvasCreation: () => () => void, setCurrentTime: any) {
+function eventSubscriptions(wavesurfer: { wavesurfer: any; wsRegions: any; minimap: any; minimapRegions: any; timeline: any; changeZoom: (zoom: any) => void; }, props: any, setPeakCounter, observeCanvasCreation: () => () => void, setCurrentTime: any) {
 
     return [
         wavesurfer.wavesurfer.on('play', () => {
@@ -229,3 +152,4 @@ function eventSubscriptions(wavesurfer: { wavesurfer: any; wsRegions: any; minim
         }),
     ];
 }
+

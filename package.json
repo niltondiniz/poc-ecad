@@ -8,6 +8,7 @@
     "@fontsource/roboto": "^5.0.8",
     "@mui/icons-material": "^5.14.9",
     "@mui/material": "^5.14.10",
+    "@mui/x-data-grid": "^6.16.0",
     "@testing-library/jest-dom": "^5.17.0",
     "@testing-library/react": "^13.4.0",
     "@testing-library/user-event": "^13.5.0",
@@ -27,7 +28,7 @@
   },
   "scripts": {
     "start:dev": "REACT_APP_ENV=development react-scripts start",
-    "start:prod": "REACT_APP_ENV=production react-scripts start",    
+    "start:prod": "REACT_APP_ENV=production react-scripts start",
     "build": "react-scripts build",
     "test": "react-scripts test",
     "eject": "react-scripts eject"
