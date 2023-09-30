@@ -112,7 +112,7 @@ export const App = () => {
         wavesurferHeight={200}
         wavesurferFillParent={true}
         wavesurferWaveColor="#1976d2"
-        wavesurferProgressColor="rgb(100, 0, 100, 0)"
+        wavesurferProgressColor="#f0901387"
         url={"audio_.mp3"}
         peaks={peaks}
         wavesurferCursorColor="#1f1e1e"

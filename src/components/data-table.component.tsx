@@ -21,13 +21,20 @@ export default function CustomizedTables(props: Props) {
         { field: "end", headerName: "Fim trecho", valueGetter: (params) => formatTime(params.row.end), minWidth: 50, flex: 0.5 },
         { field: "duration", headerName: "Duração", valueGetter: (params) => formatTime(params.row.duration), minWidth: 50, flex: 0.5 },
         { field: "title", headerName: "Título", minWidth: 50, flex: 2 },
-        { field: "author", headerName: "Autor/Referência", minWidth: 50, flex: 2 }       
+        { field: "author", headerName: "Autor/Referência", minWidth: 50, flex: 2 }
     ];
 
     return (
 
-        <Box sx={{ height: 400, width: '100%' }}>
-            <DataGrid
+        <Box sx={{ height: 300, width: '100%' }}>
+            <DataGrid sx={{
+                '& .MuiDataGrid-columnHeader': {
+                    backgroundColor: "#1976d2",
+                    color: "white",
+                    fontSize: "1rem",
+                },
+            }}
+
                 onCellClick={(params, event) => {
                     props.setTimeToRegion(params.row.start);
                 }}
