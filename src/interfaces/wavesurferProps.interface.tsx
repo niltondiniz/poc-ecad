@@ -1,3 +1,6 @@
+import { RegionInfo } from "./region-info.interface"
+import { TooltipPropsInterface } from "./tooltip-props.interface"
+
 export interface WavesurferProps {
     //Indica se a waveform vai ser carregada por url ou por array de peaks
     loadByUrl: boolean,
@@ -26,9 +29,7 @@ export interface WavesurferProps {
     //Largura das barras da waveform
     wavesurferBarWidth?: number,
     //Callback para obter a referencia do wavesurfer
-    getWavesurferPlayerRef?: any,
-    //Callback para registrar o evento de tooltip
-    registerOnMouseOverToRegion?: any,
+    getWavesurferPlayerRef?: any,    
     //Url do audio
     url?: string,
     //Array de peaks
@@ -67,4 +68,25 @@ export interface WavesurferProps {
     onRegionCreated?: any,
     //Callback do evento onRegionIn, é acionado toda vez que uma região é clicada, e retorna a região clicada.
     onRegionIn?: any,
+    //Setando array de regiões
+    setRegionInfo?: any,
+    //Array de RegionInfo
+    regionInfo?: RegionInfo[],
+    //Regiao com mouse over
+    mouseOverRegion?: RegionInfo,
+    //Regiao com mouse over
+    setMouseOverRegion?: any,
+    //Controla visibilidade do tooltip
+    tooltipVisible?: boolean,
+    //Controla visibilidade do tooltip
+    setTooltipVisible?: any,
+    //Dados da tooltip
+    tooltipProps?: TooltipPropsInterface;
+    //Dados da tooltip
+    setTooltipProps?: any;    
+    //Indica o id da região selecionada
+    selectedRow?: any;
+    //Usado para setar o state selectedRow
+    setSelectedRow?: any
+
 }

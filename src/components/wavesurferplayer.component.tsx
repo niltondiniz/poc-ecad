@@ -2,13 +2,26 @@ import { useRef, useState, useEffect, useCallback } from "react"
 import { useWavesurfer } from "../hooks/use-wavesurfer.hook"
 import { WavesurferProps } from "../interfaces/wavesurferProps.interface";
 import { log } from "../utils/log";
+import { TooltipComponent } from "./tooltip.component";
+import { TooltipPropsInterface } from "../interfaces/tooltip-props.interface";
+import { formatTime } from "../utils/helpers";
 
 export const WaveSurferPlayer = (props: WavesurferProps) => {
-    const containerRef = useRef<HTMLDivElement>();    
+    const containerRef = useRef<HTMLDivElement>();
     const [isTooltipVisible, setTooltipVisible] = useState(false);
     const [tooltipPosition, setTooltipPosition] = useState({ x: 0, y: 0 });
-    const [tooltipContent, setTooltipContent] = useState('');
-    const wavesurfer = useWavesurfer(containerRef, props);
+    const [tooltipProps, setTooltipProps] = useState<TooltipPropsInterface>(null);
+        
+    const wavesurfer = useWavesurfer(
+        containerRef,
+        props,
+        props.regionInfo,
+        props.setRegionInfo,
+        tooltipPosition,        
+        setTooltipVisible,
+        tooltipProps,
+        setTooltipProps
+    );
     const [peakCounter, setPeakCounter] = useState(0);
     const [isLoading, setIsLoading] = useState(false);
     const timerRef = useRef<NodeJS.Timeout | null>(null);
@@ -55,38 +68,16 @@ export const WaveSurferPlayer = (props: WavesurferProps) => {
         }
     }, []);
 
-    const registerOverEvent = useCallback((region, regionsArray) => {
-        region.on('over', () => {
-            const content = wavesurfer.getTooltipContent(region, regionsArray);
-            const posicao = tooltipPosition;
-            if (content.showTooltip) {
-                showToolTip(posicao.x, posicao.y + 200, true, content.content);
-            }
-        });
-        region.on('leave', () => {
-            showToolTip(100, 100, false);
-        });
-    }, [tooltipPosition, wavesurfer]);
-
     const handleMouseMove = useCallback((e) => {
         const mouseX = e.clientX;
         const mouseY = e.clientY;
         setTooltipPosition({ x: mouseX, y: mouseY });
     }, []);
 
-    const showToolTip = useCallback((x, y, isVisible, content?) => {
-        setTooltipContent(content);
-        setTooltipPosition({ x, y });
-        setTooltipVisible(isVisible);
-    }, []);
-
     useEffect(() => {
         if (!wavesurfer.wavesurfer) return;
 
-        props.registerOnMouseOverToRegion && props.registerOnMouseOverToRegion(registerOverEvent);        
-
         wavesurfer.wavesurfer.on('zoom', (zoom) => {            
-            log('Disparou o zoom');
             observeCanvasCreation();
         });
 
@@ -95,14 +86,7 @@ export const WaveSurferPlayer = (props: WavesurferProps) => {
         return () => {
             subscriptions.forEach((unsub) => unsub());
         };
-    }, [wavesurfer.wavesurfer, props, registerOverEvent, observeCanvasCreation]);
-
-    const formatTime = useCallback((time: number): string => {
-        const hours = Math.floor(time / 3600);
-        const minutes = Math.floor((time % 3600) / 60);
-        const seconds = Math.floor(time % 60);
-        return `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
-    }, []);
+    }, [wavesurfer, props, observeCanvasCreation]);
 
     return (
         <div style={{ justifyContent: "center", alignItems: "center", width: '100%' }} >
@@ -110,34 +94,8 @@ export const WaveSurferPlayer = (props: WavesurferProps) => {
                 <div className="waveformContainer" ref={containerRef} style={{ minHeight: '220px', zIndex: 1, margin: 16 }} onMouseMove={handleMouseMove} />
                 {isLoading && props.loadingComponent}
             </div>
-            {isTooltipVisible && (
-                <div
-                    id="tooltip"
-                    className="tooltip"
-                    style={{
-                        position:
-                            'absolute',
-                        left: tooltipPosition.x + 16,
-                        top: tooltipPosition.y,
-                        maxWidth: 250,
-                        backgroundColor: '#6a5e5e',
-                        opacity: 0.9,
-                        borderRadius: 9,
-                        zIndex: 1000,
-                        justifyContent: 'center',
-                        alignItems: 'center',
-                        textAlign: 'left',
-                        padding: 16,
-                        color: '#f9f7f7',
-                        fontWeight: '500',
-
-                    }}
-                >
-                    {tooltipContent}
-
-                </div>
-            )}
-            <span style={{marginLeft:16}}>{
+            <TooltipComponent tooltipProps={tooltipProps} tooltipPosition={tooltipPosition} />
+            <span style={{ marginLeft: 16 }}>{
                 props.showInnerCurrentTime ?
                     formatTime(currentTime) : <div></div>
 
@@ -146,14 +104,15 @@ export const WaveSurferPlayer = (props: WavesurferProps) => {
     )
 }
 
-function eventSubscriptions(wavesurfer: { wavesurfer: any; wsRegions: any; minimap: any; minimapRegions: any; timeline: any; changeZoom: (zoom: any) => void; getTooltipContent: (region: any, regionsArray: any) => any; }, props: any, setPeakCounter, observeCanvasCreation: () => () => void, setCurrentTime: any) {
+function eventSubscriptions(wavesurfer: { wavesurfer: any; wsRegions: any; minimap: any; minimapRegions: any; timeline: any; changeZoom: (zoom: any) => void; }, props: any, setPeakCounter, observeCanvasCreation: () => () => void, setCurrentTime: any) {
+
     return [
         wavesurfer.wavesurfer.on('play', () => {
-            log('on play');            
+            log('on play');
             props.onPlay && props.onPlay(true);
         }),
         wavesurfer.wavesurfer.on('pause', () => {
-            log('on pause');            
+            log('on pause');
             props.onPlay && props.onPlay(false);
             props.onPause && props.onPause();
         }),
@@ -168,15 +127,18 @@ function eventSubscriptions(wavesurfer: { wavesurfer: any; wsRegions: any; minim
         }),
         wavesurfer.wavesurfer.on('ready', (duration) => {
             log('on ready');
+            wavesurfer.wsRegions.enableDragSelection({
+                color: 'rgb(173,216,230,0.5)',
+            });
             props.getWavesurferPlayerRef(wavesurfer);
             props.onReady && props.onReady(duration);
         }),
-        wavesurfer.wavesurfer.on('zoom', (zoom) => {            
+        wavesurfer.wavesurfer.on('zoom', (zoom) => {
             log('Disparou o zoom');
             observeCanvasCreation();
         }),
         wavesurfer.wavesurfer.on('finish', () => {
-            log('on finish');        
+            log('on finish');
             props.onPlay && props.onPlay(false);
             props.onFinish && props.onFinish();
         }),
@@ -190,3 +152,4 @@ function eventSubscriptions(wavesurfer: { wavesurfer: any; wsRegions: any; minim
         }),
     ];
 }
+

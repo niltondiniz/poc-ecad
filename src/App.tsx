@@ -5,65 +5,73 @@ import { Slider } from 'rsuite';
 import Button from '@mui/material/Button';
 import Typography from '@mui/material/Typography';
 import MediaControlsComponent from './components/mediacontrols.component';
+import CustomizedTables from './components/data-table.component';
+import { RegionInfo } from './interfaces/region-info.interface';
+import { formatTime } from './utils/helpers';
+import { listaDeMusicasRockAnos80 } from './utils/consts';
 
 export const App = () => {
 
-  const urls = ['audio.mp3', 'audio_.mp3'];
-  const peakNames = ['audio1', 'audio2'];
-  const [audioUrl, setAudioUrl] = useState(urls[0]);
-  const [peakUrl, setPeakUrl] = useState(`${peakNames[0]}.json`);
   const [peaks, setPeaks] = useState([0]);
-  const [zoom, setZoom] = useState(0);
-  const [regions, setRegions] = useState([]);
   const [currentTime, setCurrentTime] = useState(0);
   const [isPlaying, setIsPlaying] = useState(false);
   const [wavesurfer, setWavesurfer] = useState(null);
-
-  //Variáveis para manipular o componente WaveSurferPlayer
-  let registerEvent = null;
-
-  function getTwoRandomNumbers() {
-    //dois algarismos aleatórios
-    const random = Math.floor(Math.random() * 100);
-    return random.toString().padStart(2, '0');
-
-  }
+  const [regionInfo, setRegionInfo] = useState<RegionInfo[]>([]);
+  const [selectedRow, setSelectedRow] = useState(undefined);
+  const [mouseOverRegion, setMouseOverRegion] = useState<RegionInfo | null>(null);
 
   //Esta função é responsável por obter a referência do componente WaveSurferPlayer
   function getWavesurferPlayerRef(ref) {
-    console.log('Registrado');
     setWavesurfer(ref);
   }
 
-  //esta função é responsável por setar a referencia da função que registra o evento de mouseover, para exibir o tooltip
-  function setRegisterEvent(event) {
-    registerEvent = event;
+  function playRegion(startTime: number) {
+    //wavesurfer.wavesurfer.setTime(startTime);
+    wavesurfer.wavesurfer.play();
   }
 
-  //Função responsável por formatar o tempo para exibição
-  const formatTime = (time: number): string => {
-    const hours = Math.floor(time / 3600);
-    const minutes = Math.floor((time % 3600) / 60);
-    const seconds = Math.floor(time % 60);
-    return `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
-  };
+  function setTimeToRegion(startTime: number) {
+    wavesurfer.wavesurfer.setTime(startTime);
+  }
 
   useEffect(() => {
     //Carregando os peaks para exibir o waveform    
-    fetch(`http://localhost:3001/download/${peakUrl}`)
+    fetch(`http://localhost:3001/download/audio2.json`)
       .then(response => response.json())
       .then(data => {
         setPeaks(data.data);
       });
-  }, [peakUrl]);
+  }, []);
 
-  //Usada para alterar o peak/audio utilizado
-  const onUrlChange = useCallback(() => {
-    urls.reverse();
-    peakNames.reverse();
-    setAudioUrl(urls[0]);
-    setPeakUrl(`${peakNames[0]}.json`);
-  }, [urls, peakNames]);
+  const registerUpdateRegionEvent = useCallback((region, regionsArray) => {
+    region.on('update', () => {
+      // Encontrar a região no state regionInfo que está sendo atualizada pelo id
+      const regionToUpdate = regionsArray.find(regionData => regionData.id === region.id);
+
+      // Atualizar o inicio e fim da região
+      if (regionToUpdate) {
+        const updatedRegion = {
+          ...regionToUpdate, // Copie todas as propriedades existentes
+          start: region.start,
+          end: region.end,
+          duration: region.end - region.start,
+        };
+
+        // Crie uma nova cópia do array com a região atualizada
+        const updatedRegionsArray = regionsArray.map(regionData => {
+          if (regionData.id === region.id) {
+            return updatedRegion;
+          }
+          return regionData;
+        });
+
+        // Atualize o state regionInfo com a nova cópia do array
+        setRegionInfo(updatedRegionsArray);
+
+      }
+    });
+
+  }, []);
 
   //Este componente será exibido enquanto estiver carregando o zoom do waveform
   const loadingComponent = (
@@ -101,12 +109,11 @@ export const App = () => {
       <WaveSurferPlayer
         loadByUrl={false}
         getWavesurferPlayerRef={getWavesurferPlayerRef}
-        registerOnMouseOverToRegion={setRegisterEvent}
         wavesurferHeight={200}
         wavesurferFillParent={true}
         wavesurferWaveColor="#1976d2"
-        wavesurferProgressColor="rgb(100, 0, 100, 0)"
-        url={audioUrl}
+        wavesurferProgressColor="#f0901387"
+        url={"audio_.mp3"}
         peaks={peaks}
         wavesurferCursorColor="#1f1e1e"
         wavesurferMediaControls={false}
@@ -115,6 +122,14 @@ export const App = () => {
         showInnerCurrentTime={false}
         onPlay={setIsPlaying}
         wavesurferBarWidth={2}
+        timelinePrimaryLabelInterval={3600}
+        regionInfo={regionInfo}
+        mouseOverRegion={mouseOverRegion}
+        setMouseOverRegion={setMouseOverRegion}
+        setRegionInfo={setRegionInfo}
+        selectedRow={selectedRow}
+        setSelectedRow={setSelectedRow}
+        onRegionIn={(region) => { setSelectedRow(region.id) }}
       />
 
       <div style={{ display: 'flex', flexDirection: 'row', width: '100%', justifyContent: 'center', alignItems: 'center' }}>
@@ -125,109 +140,45 @@ export const App = () => {
 
       <div style={{ display: 'flex', flexDirection: 'row', width: '100%', justifyContent: 'center', alignItems: 'center' }}>
 
-        <Button variant="contained" style={{ margin: 16 }} onClick={onUrlChange}>Carregar áudio</Button>
+        {/* <Button variant="contained" style={{ margin: 16 }} onClick={onUrlChange}>Carregar áudio</Button> */}
         <div style={{ margin: 16 }}>
 
           <Button variant="contained" onClick={() => {
 
-            const idNewRegion = Math.random();
+            const idNewRegion = Math.floor(Math.random() * 10);
+            const randomNumber = Math.floor(Math.random() * 10);
 
-            /*Este componente jsx será exibido no tooltip
-              O componente pode ser qualquer coisa, inclusive outro componente React
-              O importante é colocar aqui as informações que estão na documentação do ECAD
-              Bem provável que aqui serão exibidas informações da região, como duração, inicio e fim, autor, musica e etc.
-            */
-            const tooltipContent = (
-              <div>
-                <h4>Título</h4>
-                <p>Este é um parágrafo de exemplo.</p>
-                <ul>
-                  <li>{idNewRegion}</li>
-                  <li>Autor: Nilton Diniz</li>
-                  <li>Musica: Teste de musica</li>
-                  <li>Ano: {Math.random()}</li>
-                </ul>
-              </div>
-            )
-
-            const newContentRegion = { id: idNewRegion, content: tooltipContent, showTooltip: true };
-
-            setRegions([...regions, newContentRegion]);
-
-            const newRegion = wavesurfer.wsRegions.addRegion({
+            const regionData = {
               id: idNewRegion,
               start: wavesurfer.wavesurfer.getCurrentTime(),
-              end: wavesurfer.wavesurfer.getCurrentTime() + 100,
-              color: `#${getTwoRandomNumbers()}${getTwoRandomNumbers()}${getTwoRandomNumbers()}B0`,
-              drag: false,
-              resize: false,
-            });
+              end: wavesurfer.wavesurfer.getCurrentTime() + 10000,
+              duration: 10000,
+              title: listaDeMusicasRockAnos80[randomNumber].title,
+              author: listaDeMusicasRockAnos80[randomNumber].author,
+              showTooltip: true
+            }
 
-            //Registrando o evento do tooltip.
-            //Isto é feito para cada region adicionada.
-            //Está na documentação do wavesurfer.
-            registerEvent(newRegion, [...regions, newContentRegion]);
-
-            wavesurfer.wsRegions.addRegion({
-              start: newRegion.start,
-              color: '#000000',
-              drag: false,
-              resize: false
-            });
-
-            const newMinimapRegion = wavesurfer.minimapRegions.addRegion({
-              id: newRegion.id,
-              start: newRegion.start,
-              end: newRegion.end,
-              color: newRegion.color,
-              drag: newRegion.drag,
-              resize: newRegion.resize,
-            });
-
-            wavesurfer.minimapRegions.addRegion({
-              id: newMinimapRegion.id,
-              start: newMinimapRegion.start,
-              color: '#000000',
-              drag: newMinimapRegion.drag,
-              resize: newMinimapRegion.resize,
-            });
-
-            //Registrando o evento do tooltip. Agora para o minimap
-            registerEvent(newMinimapRegion, [...regions, newContentRegion]);
+            setRegionInfo([...regionInfo, regionData]);
+            wavesurfer.addRegion(regionData);
 
           }}>Add Region</Button>
         </div>
 
         <div style={{ margin: 16 }}>
           <Button variant="contained" onClick={() => {
-            const markerRegion = wavesurfer.wsRegions.addRegion({
-              start: wavesurfer.getCurrentTime(),
-              color: '#000000',
-              drag: false,
-              resize: false
-            });
-
-            wavesurfer.minimapRegions.addRegion({
-              id: markerRegion.id,
-              start: markerRegion.start,
-              color: '#000000',
-              drag: markerRegion.drag,
-              resize: markerRegion.resize,
-            });
-          }}>Add Marker</Button>
-        </div>
-
-        <div style={{ margin: 16 }}>
-          <Button variant="contained" onClick={() => {
             wavesurfer.wsRegions.clearRegions();
             wavesurfer.minimapRegions.clearRegions();
+            setRegionInfo([]);
           }}>Remove all regions</Button>
         </div>
 
         <div style={{ margin: 16 }}>
           <Button variant="contained" onClick={() => {
-            setZoom(Math.random());
-          }}>Atualizando estado {zoom}</Button>
+            const gaps = wavesurfer.findRegionGaps(wavesurfer.wavesurfer.getDuration());
+            if (gaps.length > 0) {
+              wavesurfer.setZoomOnGap(gaps[0]);
+            }
+          }}>Find gaps</Button>
         </div>
       </div>
 
@@ -236,7 +187,7 @@ export const App = () => {
           <Slider
             defaultValue={0}
             min={0}
-            max={100}
+            max={20}
             progress
             style={{ marginTop: 16 }}
             renderMark={mark => {
@@ -249,6 +200,9 @@ export const App = () => {
         </div>
       </div>
       <MediaControlsComponent wavesurfer={wavesurfer} isPlaying={isPlaying} />
+      <div style={{ marginTop: 16 }}>
+        <CustomizedTables regions={regionInfo} playRegion={playRegion} setTimeToRegion={setTimeToRegion} selectedRow={selectedRow} />
+      </div>
     </div >
   );
 };
