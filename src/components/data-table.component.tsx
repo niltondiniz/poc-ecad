@@ -54,42 +54,6 @@ export default function CustomizedTables(props: Props) {
                 rowSelectionModel={props.selectedRow}
             />
         </Box>
-
-        // <TableContainer component={Paper}>
-        //     <Table sx={{ minWidth: 700 }} aria-label="customized table">
-        //         <TableHead>
-        //             <TableRow >
-        //                 <StyledTableCell align="left">Inicio&nbsp;trecho</StyledTableCell>
-        //                 <StyledTableCell align="left">Fim&nbsp;trecho</StyledTableCell>
-        //                 <StyledTableCell align="left">Duração</StyledTableCell>
-        //                 <StyledTableCell align="left">Título</StyledTableCell>
-        //                 <StyledTableCell align="left">Autor/Referência</StyledTableCell>
-        //             </TableRow>
-        //         </TableHead>
-        //         <TableBody>
-        //             {props.regions.map((row) => (
-        //                 <StyledTableRow
-        //                     key={row.start}
-        //                     hover
-        //                     onClick={(event) => {
-        //                         props.setTimeToRegion(row.start);
-        //                     }}
-        //                     onDoubleClick={(event) => {
-        //                         props.playRegion(row.start);
-        //                     }}
-        //                 >
-
-        //                     <StyledTableCell align="left" component="th" scope="row">
-        //                         {formatTime(row.start)}
-        //                     </StyledTableCell>
-        //                     <StyledTableCell align="left">{formatTime(row.end)}</StyledTableCell>
-        //                     <StyledTableCell align="left">{formatTime(row.duration)}</StyledTableCell>
-        //                     <StyledTableCell align="left">{row.title}</StyledTableCell>
-        //                     <StyledTableCell align="left">{row.author}</StyledTableCell>
-        //                 </StyledTableRow>
-        //             ))}
-        //         </TableBody>
-        //     </Table>
-        // </TableContainer>
+        
     );
 }
